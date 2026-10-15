@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页后台 · MQTT 数据结构</title>
+  <link rel="stylesheet" href="../css/web.css" />
+  <style>
+    .code-box {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: .72rem;
+      line-height: 1.45;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 12px;
+      padding: 12px;
+      white-space: pre-wrap;
+      max-height: 280px;
+      overflow: auto;
+    }
+    .map-row {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr 0.7fr;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: .78rem;
+    }
+    .map-row:last-child { border-bottom: none; }
+    .map-row code { font-size: .72rem; color: var(--info); }
+  </style>
+</head>
+<body>
+  <header class="topnav">
+    <div class="brand">危废智控 <span style="background:#fdf0e9;color:var(--accent)">网页后台</span></div>
+    <nav>
+      <a href="../index.html">总览</a>
+      <a href="../web-portal/index.html">前台</a>
+      <a class="on" href="index.html">后台</a>
+      <a href="../app/index.html">APP</a>
+    </nav>
+  </header>
+  <div class="shell">
+    <aside class="side">
+      <div class="who"><strong>王管理</strong><small>系统管理员 · 全仓</small></div>
+      <div class="sec">组织权限</div>
+      <a href="users.html">人员管理</a>
+      <a href="roles.html">角色权限</a>
+      <div class="sec">数据管理录入</div>
+      <a href="warehouse.html">仓储开单</a>
+      <a href="materials.html">物资维护</a>
+      <a href="inventory.html">盘点任务</a>
+      <a href="thresholds.html">预警阈值</a>
+      <a href="units.html">运输单元</a>
+      <a href="checkin.html">打卡记录</a>
+      <a href="geofence.html">电子围栏</a>
+      <a href="devices.html">设备配置</a>
+      <a class="on" href="mqtt-schema.html">MQTT 数据结构</a>
+      <div class="sec">概览</div>
+      <a href="index.html">后台首页</a>
+    </aside>
+    <main class="main">
+      <div class="page-title">
+        <div>
+          <h1>MQTT 可自定义数据结构</h1>
+          <p>配置 Topic 模板、Schema Profile 与字段映射 · 归一为 Canonical 供监测/告警消费</p>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-secondary" data-toast="已复制系统默认 Profile">从默认复制</button>
+          <button class="btn btn-primary" data-toast="Profile 草稿已保存">保存草稿</button>
+        </div>
+      </div>
+
+      <div class="stats" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat"><div class="l">已发布 Profile</div><div class="v">3</div></div>
+        <div class="stat"><div class="l">Topic 模板</div><div class="v">5</div></div>
+        <div class="stat"><div class="l">绑定设备</div><div class="v">12</div></div>
+        <div class="stat"><div class="l">近 24h 解析失败</div><div class="v warn">2</div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Profile 列表</h3>
+          <table>
+            <thead><tr><th>ID</th><th>名称</th><th>类型</th><th>版本</th><th>状态</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>PF-SYS-DEFAULT</td><td>系统默认遥测</td><td>telemetry</td><td>1.0.0</td>
+                <td><span class="badge ok">已发布</span></td>
+              </tr>
+              <tr style="background:#f0fdf4">
+                <td>PF-TH-VENDOR-A</td><td>A厂温湿度网关</td><td>telemetry</td><td>1.2.0</td>
+                <td><span class="badge info">编辑中</span></td>
+              </tr>
+              <tr>
+                <td>PF-GPS-B</td><td>B厂定位终端</td><td>location</td><td>1.0.1</td>
+                <td><span class="badge ok">已发布</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="note">详规：docs/MQTT可自定义数据结构规范.md</p>
+        </div>
+        <div class="card">
+          <h3>当前编辑 · PF-TH-VENDOR-A</h3>
+          <div class="field"><label>显示名</label><input value="A厂温湿度网关" /></div>
+          <div class="field"><label>消息类型</label>
+            <select><option>telemetry</option><option>event</option><option>location</option><option>heartbeat</option><option>command</option></select>
+          </div>
+          <div class="field"><label>Topic 模板（上行）</label>
+            <input value="factoryA/{sn}/data" />
+          </div>
+          <div class="field"><label>版本</label><input value="1.2.0" /></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>原始样例报文（厂商自定义）</h3>
+          <div class="code-box">{
+  "sn": "A10086",
+  "time": 1728976800,
+  "data": {
+    "temp": 285,
+    "humi": 620,
+    "leak": 0,
+    "door": 0
+  },
+  "bat": 86
+}</div>
+        </div>
+        <div class="card">
+          <h3>字段映射 → Canonical</h3>
+          <div class="map-row"><span>Canonical 目标</span><span>原始 source</span><span>变换</span></div>
+          <div class="map-row"><code>metrics.temperature</code><code>$.data.temp</code><span>scale ×0.1</span></div>
+          <div class="map-row"><code>metrics.humidity</code><code>$.data.humi</code><span>scale ×0.1</span></div>
+          <div class="map-row"><code>metrics.waterLeak</code><code>$.data.leak</code><span>enumMap 0/1</span></div>
+          <div class="map-row"><code>metrics.intrusion</code><code>$.data.door</code><span>enumMap 0/1</span></div>
+          <div class="map-row"><code>ts</code><code>$.time</code><span>fromUnixSec</span></div>
+          <div class="map-row"><code>quality.battery</code><code>$.bat</code><span>number</span></div>
+          <button class="btn btn-secondary btn-sm" style="margin-top:10px" data-toast="已添加一行映射">+ 添加映射</button>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Dry-run 结果 · Canonical</h3>
+          <div class="code-box">{
+  "schema": "hw.canonical.v1",
+  "messageType": "telemetry",
+  "ts": "2026-10-15T07:20:00.000Z",
+  "deviceId": "A10086",
+  "profileId": "PF-TH-VENDOR-A",
+  "profileVersion": "1.2.0",
+  "body": {
+    "metrics": {
+      "temperature": 28.5,
+      "humidity": 62.0,
+      "waterLeak": false,
+      "intrusion": false
+    },
+    "quality": { "battery": 86 }
+  }
+}</div>
+          <div class="btn-row" style="margin-top:12px">
+            <button class="btn btn-primary" data-toast="映射试跑通过，无错误">试跑映射</button>
+            <button class="btn btn-secondary" data-toast="已发布 v1.2.0，可绑定设备">发布版本</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>设备绑定</h3>
+          <div class="field"><label>设备</label>
+            <select><option>TH-001 · 东区 A01</option><option>GW-A01</option></select>
+          </div>
+          <div class="field"><label>telemetry Profile</label>
+            <select><option>PF-TH-VENDOR-A @ 1.2.0</option><option>PF-SYS-DEFAULT @ 1.0.0</option></select>
+          </div>
+          <div class="field"><label>location Profile</label>
+            <select><option>PF-GPS-B @ 1.0.1</option><option>（不使用）</option></select>
+          </div>
+          <button class="btn btn-primary" data-toast="设备 MQTT 绑定已保存">保存绑定</button>
+          <p class="note">告警阈值仍针对 Canonical 键 temperature / humidity 等；厂商字段名变更只需改映射。</p>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../js/web.js"></script>
+</body>
+</html>

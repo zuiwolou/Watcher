@@ -27,5 +27,6 @@ APP 扫码打卡 · 盘点实盘 · 入出库确认
 
 ## 文档
 
-- [系统设计文档 V2.1](docs/智能危废管控系统设计文档.md)
+- [系统设计文档 V2.2](docs/智能危废管控系统设计文档.md)
 - [架构与组网示意图](docs/架构与组网示意图.md)
+- [MQTT 可自定义数据结构规范](docs/MQTT可自定义数据结构规范.md)（后台原型：[mqtt-schema](prototypes/web-admin/mqtt-schema.html)）

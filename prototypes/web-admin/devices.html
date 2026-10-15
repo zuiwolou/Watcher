@@ -31,6 +31,7 @@
       <a href="checkin.html">打卡记录</a>
       <a href="geofence.html">电子围栏</a>
       <a class="on" href="devices.html">设备配置</a>
+      <a href="mqtt-schema.html">MQTT 数据结构</a>
       <div class="sec">概览</div>
       <a href="index.html">后台首页</a>
     </aside>
@@ -48,6 +49,11 @@
             <tr><td>CAM-01</td><td>摄像头</td><td>A01 入口</td><td>ONVIF → HLS</td><td><span class="badge ok">在线</span></td></tr>
           </tbody>
         </table>
+      </div>
+      <div class="card">
+        <h3>MQTT 报文模板</h3>
+        <p style="font-size:.85rem;color:var(--muted);margin-bottom:10px">设备上报结构可按厂商自定义，经 Profile 映射为系统标准字段。</p>
+        <a class="btn btn-primary btn-sm" href="mqtt-schema.html">配置 MQTT 数据结构</a>
       </div>
       <div class="card">
         <h3>监管对接</h3>
