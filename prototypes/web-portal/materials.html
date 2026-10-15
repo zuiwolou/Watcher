@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页前台 · 物资总览</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="portal-top">
+    <div class="bar">
+      <div class="brand">危废智控 <em>网页前台</em></div>
+      <div class="meta">
+        <span>李值班 · 只读观察员</span>
+        <a href="../web-admin/index.html">后台管理</a>
+        <a href="../index.html">原型总览</a>
+      </div>
+    </div>
+    <nav class="portal-menu">
+      <a href="index.html">工作台</a>
+      <a href="alarms.html">告警中心</a>
+      <a class="on" href="materials.html">物资总览</a>
+      <a href="inventory.html">盘点报表</a>
+      <a href="monitor.html">智能监测</a>
+      <a href="tracking.html">运输地图</a>
+      <a href="geofence.html">围栏状态</a>
+    </nav>
+  </header>
+  <main class="portal-body">
+    <div class="page-title">
+      <div><h1>物资总览</h1><p>只读查询 · 档案维护在后台 · 扫码入出库在 APP</p></div>
+      <button class="btn btn-secondary" data-toast="导出任务已创建">导出</button>
+    </div>
+    <div class="filters">
+      <select><option>东区 A01</option><option>西区 T02</option></select>
+      <select><option>在库</option><option>在途</option></select>
+      <input placeholder="唯一码 / 名称" style="min-width:180px" />
+    </div>
+    <div class="stats" style="grid-template-columns:repeat(3,1fr)">
+      <div class="stat"><div class="l">筛选件数</div><div class="v">128</div></div>
+      <div class="stat"><div class="l">合计重量</div><div class="v">4.62 t</div></div>
+      <div class="stat"><div class="l">库容占用</div><div class="v warn">72%</div></div>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>唯一码</th><th>危废</th><th>重量</th><th>库位</th><th>库龄</th><th>状态</th></tr></thead>
+        <tbody>
+          <tr><td>HW31-…-00088</td><td>废铅蓄电池</td><td>0.036t</td><td>B-02-06</td><td><span class="badge warn">25d</span></td><td><span class="badge ok">在库</span></td></tr>
+          <tr><td>HW31-…-00102</td><td>废铅蓄电池</td><td>0.034t</td><td>A-03-12</td><td><span class="badge ok">14d</span></td><td><span class="badge ok">在库</span></td></tr>
+          <tr><td>HW31-…-00021</td><td>废铅蓄电池</td><td>0.041t</td><td>C-01-02</td><td><span class="badge danger">64d</span></td><td><span class="badge ok">在库</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script src="../js/web.js"></script>
+</body>
+</html>

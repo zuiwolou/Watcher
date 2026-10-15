@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页前台 · 盘点报表</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="portal-top">
+    <div class="bar">
+      <div class="brand">危废智控 <em>网页前台</em></div>
+      <div class="meta">
+        <span>李值班 · 只读观察员</span>
+        <a href="../web-admin/index.html">后台管理</a>
+        <a href="../index.html">原型总览</a>
+      </div>
+    </div>
+    <nav class="portal-menu">
+      <a href="index.html">工作台</a>
+      <a href="alarms.html">告警中心</a>
+      <a href="materials.html">物资总览</a>
+      <a class="on" href="inventory.html">盘点报表</a>
+      <a href="monitor.html">智能监测</a>
+      <a href="tracking.html">运输地图</a>
+      <a href="geofence.html">围栏状态</a>
+    </nav>
+  </header>
+  <main class="portal-body">
+    <div class="page-title">
+      <div><h1>盘点报表</h1><p>只读查看 · 任务在后台创建 · 扫码实盘在 APP 执行</p></div>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>单号</th><th>仓库</th><th>应盘/实盘</th><th>差异</th><th>执行端</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>PD-20261015-01</td><td>东区 A01</td><td>128 / 126</td>
+            <td><span class="badge danger">盘亏 2</span></td>
+            <td>APP 扫码</td>
+            <td><button class="btn btn-secondary btn-sm" data-toast="下载 PDF">下载</button></td>
+          </tr>
+          <tr>
+            <td>PD-20260930-02</td><td>东区 A01</td><td>120 / 120</td>
+            <td><span class="badge ok">相符</span></td>
+            <td>APP 扫码</td>
+            <td><button class="btn btn-secondary btn-sm" data-toast="下载 Excel">下载</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script src="../js/web.js"></script>
+</body>
+</html>

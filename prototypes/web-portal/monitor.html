@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页前台 · 智能监测</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="portal-top">
+    <div class="bar">
+      <div class="brand">危废智控 <em>网页前台</em></div>
+      <div class="meta">
+        <span>李值班 · 只读观察员</span>
+        <a href="../web-admin/index.html">后台管理</a>
+        <a href="../index.html">原型总览</a>
+      </div>
+    </div>
+    <nav class="portal-menu">
+      <a href="index.html">工作台</a>
+      <a href="alarms.html">告警中心</a>
+      <a href="materials.html">物资总览</a>
+      <a href="inventory.html">盘点报表</a>
+      <a class="on" href="monitor.html">智能监测</a>
+      <a href="tracking.html">运输地图</a>
+      <a href="geofence.html">围栏状态</a>
+    </nav>
+  </header>
+  <main class="portal-body">
+    <div class="page-title">
+      <div><h1>智能监测</h1><p>环境多源数据实时展示</p></div>
+      <select><option>东区暂存仓 A01</option><option>西区转运仓 T02</option></select>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="l">温度</div><div class="v danger">36.2℃</div></div>
+      <div class="stat"><div class="l">湿度</div><div class="v">62%</div></div>
+      <div class="stat"><div class="l">水浸</div><div class="v" style="font-size:1.2rem;color:var(--ok)">正常</div></div>
+      <div class="stat"><div class="l">入侵</div><div class="v" style="font-size:1.2rem;color:var(--ok)">安全</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>近 24h 温度</h3>
+        <div class="chart">
+          <i style="height:40%"></i><i style="height:55%"></i><i style="height:70%"></i>
+          <i style="height:90%;background:linear-gradient(180deg,#b91c1c,#f87171)"></i>
+        </div>
+      </div>
+      <div class="card">
+        <h3>监控视频</h3>
+        <div style="aspect-ratio:16/10;background:#0f172a;border-radius:12px;display:grid;place-items:center;color:#94a3b8">▶ HLS 预览</div>
+      </div>
+    </div>
+  </main>
+  <script src="../js/web.js"></script>
+</body>
+</html>

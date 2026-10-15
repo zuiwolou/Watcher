@@ -3,116 +3,54 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>智能危废管控 APP — 原型首页</title>
-  <link rel="stylesheet" href="css/app.css" />
+  <title>智能危废管控系统 · 原型总览 V2.1</title>
+  <link rel="stylesheet" href="css/web.css" />
 </head>
 <body>
-  <div class="desk-bar">
-    <div>
-      <h1>智能危废管控系统 · APP 原型</h1>
-      <p>覆盖仓储、物资、盘点、预警、运输打卡、单元管理、定位跟踪、电子围栏、智能监测九大模块。点击宫格进入对应流程。</p>
-    </div>
-    <nav class="nav-pills">
-      <a class="active" href="index.html">首页</a>
-      <a href="pages/warehouse.html">仓储</a>
-      <a href="pages/materials.html">物资</a>
-      <a href="pages/inventory.html">盘点</a>
-      <a href="pages/alerts.html">预警</a>
-      <a href="pages/checkin.html">打卡</a>
-      <a href="pages/units.html">单元</a>
-      <a href="pages/tracking.html">定位</a>
-      <a href="pages/geofence.html">围栏</a>
-      <a href="pages/monitor.html">监测</a>
-    </nav>
-  </div>
+  <div class="hub">
+    <h1>智能危废管控系统 · 原型总览（V2.1）</h1>
+    <p>网页前台为<strong>上下顶栏菜单</strong>布局，只做数据展示；网页后台只做人员权限与主数据录入；管控 APP 负责展示 + 运输打卡 / 盘点扫码 / 入出库扫码等现场执行。</p>
 
-  <div class="stage">
-    <div class="phone">
-      <div class="phone-screen">
-        <div class="status-bar"><span>14:36</span><span class="icons">5G · 86%</span></div>
-        <div class="app-header">
-          <h2>危废智控</h2>
-          <a class="action" href="pages/alerts.html">3 条告警</a>
-        </div>
-        <div class="content">
-          <div class="hero-card">
-            <div class="brand">HAZWASTE WATCHER</div>
-            <h3>东区废铅蓄电池暂存仓</h3>
-            <p>多模组网在线 · 全场景监控就绪</p>
-            <div class="hero-stats">
-              <div><strong>128</strong><span>在库件</span></div>
-              <div><strong>72%</strong><span>库容</span></div>
-              <div><strong>26.4°</strong><span>仓温</span></div>
-            </div>
-          </div>
+    <div class="hub-grid">
+      <a class="hub-card" href="web-portal/index.html">
+        <span class="tag">网页前台 · 上下布局</span>
+        <h2>数据展示门户</h2>
+        <p>顶部菜单栏 + 全宽内容区。告警、物资、监测、定位、围栏状态只读展示。</p>
+        <ul>
+          <li>顶栏：工作台 / 告警 / 物资 / …</li>
+          <li>无左侧导航、无扫码执行</li>
+        </ul>
+      </a>
 
-          <div class="section-title">业务作业<a href="pages/warehouse.html">流程说明</a></div>
-          <div class="grid-4">
-            <a class="mod-tile" href="pages/warehouse.html"><div class="ico">仓</div><span>仓储管理</span></a>
-            <a class="mod-tile" href="pages/materials.html"><div class="ico">物</div><span>物资管理</span></a>
-            <a class="mod-tile accent" href="pages/inventory.html"><div class="ico">盘</div><span>库存盘点</span></a>
-            <a class="mod-tile warn" href="pages/alerts.html"><div class="ico">警</div><span>预警管理</span></a>
-          </div>
+      <a class="hub-card admin" href="web-admin/index.html">
+        <span class="tag">网页后台 · 管理录入</span>
+        <h2>管理与数据录入</h2>
+        <p>人员角色权限、开单发码、物资/阈值/围栏/单元/设备。不做现场打卡扫码。</p>
+        <ul>
+          <li>人员 · 角色权限矩阵</li>
+          <li>盘点任务创建（扫码在 APP）</li>
+          <li>打卡记录只读审计</li>
+        </ul>
+      </a>
 
-          <div class="section-title">运输与定位</div>
-          <div class="grid-4">
-            <a class="mod-tile info" href="pages/checkin.html"><div class="ico">卡</div><span>运输打卡</span></a>
-            <a class="mod-tile" href="pages/units.html"><div class="ico">车</div><span>运输单元</span></a>
-            <a class="mod-tile accent" href="pages/tracking.html"><div class="ico">图</div><span>定位跟踪</span></a>
-            <a class="mod-tile warn" href="pages/geofence.html"><div class="ico">栏</div><span>电子围栏</span></a>
-          </div>
-
-          <div class="section-title">环境感知</div>
-          <div class="grid-3">
-            <a class="mod-tile" href="pages/monitor.html"><div class="ico">测</div><span>智能监测</span></a>
-            <a class="mod-tile info" href="pages/monitor.html#video"><div class="ico">视</div><span>视频监控</span></a>
-            <a class="mod-tile warn" href="pages/alerts.html#history"><div class="ico">历</div><span>告警历史</span></a>
-          </div>
-
-          <div class="card">
-            <div class="row">
-              <h4 style="margin:0">今日待办</h4>
-              <span class="badge info">4 项</span>
-            </div>
-            <div class="list-item">
-              <div class="avatar">入</div>
-              <div style="flex:1">
-                <div class="row"><strong style="font-size:0.85rem">入库开单待确认</strong><span class="badge ok">进行中</span></div>
-                <div class="meta">申报单 SB-20261015-003 · 预计 36 件</div>
-              </div>
-            </div>
-            <div class="list-item">
-              <div class="avatar" style="background:#fff7ed;color:#b45309">运</div>
-              <div style="flex:1">
-                <div class="row"><strong style="font-size:0.85rem">运输任务途经打卡</strong><span class="badge warn">待打卡</span></div>
-                <div class="meta">车牌 粤B·D8231 · 联单 YF20261015018</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <nav class="tabbar">
-          <a class="active" href="index.html"><div class="ico">⌂</div>首页</a>
-          <a href="pages/warehouse.html"><div class="ico">仓</div>仓储</a>
-          <a href="pages/tracking.html"><div class="ico">运</div>运输</a>
-          <a href="pages/monitor.html"><div class="ico">监</div>监测</a>
-          <a href="#"><div class="ico">我</div>我的</a>
-        </nav>
-      </div>
+      <a class="hub-card app" href="app/index.html">
+        <span class="tag">管控 APP · 展示+执行</span>
+        <h2>移动端现场作业</h2>
+        <p>态势展示与告警推送；运输打卡、盘点扫码、入出库扫码确认。</p>
+        <ul>
+          <li>执行：打卡 / 盘点 / 入出库扫码</li>
+          <li>展示：物资 / 告警 / 监测 / 定位</li>
+        </ul>
+      </a>
     </div>
 
-    <aside class="flow-note">
-      <span class="tag">信息架构</span>
-      <h3>底部导航 × 九宫格</h3>
-      <ol>
-        <li><strong>首页</strong>：仓体态势 + 九大模块入口 + 待办</li>
-        <li><strong>仓储</strong>：申报 / 入出库开单 / 唯一码</li>
-        <li><strong>运输</strong>：打卡、单元、地图、围栏</li>
-        <li><strong>监测</strong>：环境多源数据与视频</li>
-        <li>告警角标深链至预警管理</li>
-      </ol>
-      <p style="margin-top:12px;font-size:0.75rem;color:#4a6278">配套文档：<code>docs/智能危废管控系统设计文档.md</code></p>
-    </aside>
+    <div class="card" style="margin-top:20px">
+      <h3>配套文档</h3>
+      <p style="font-size:.85rem;color:var(--muted);line-height:1.7">
+        <a href="../docs/智能危废管控系统设计文档.md" style="color:var(--brand)">系统设计文档 V2.1</a> ·
+        <a href="../docs/架构与组网示意图.md" style="color:var(--brand)">架构示意图</a>
+      </p>
+    </div>
   </div>
-  <script src="js/app.js"></script>
 </body>
 </html>

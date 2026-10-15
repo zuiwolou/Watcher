@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页前台 · 告警中心</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="portal-top">
+    <div class="bar">
+      <div class="brand">危废智控 <em>网页前台</em></div>
+      <div class="meta">
+        <span>李值班 · 只读观察员</span>
+        <a href="../web-admin/index.html">后台管理</a>
+        <a href="../index.html">原型总览</a>
+      </div>
+    </div>
+    <nav class="portal-menu">
+      <a href="index.html">工作台</a>
+      <a class="on" href="alarms.html">告警中心</a>
+      <a href="materials.html">物资总览</a>
+      <a href="inventory.html">盘点报表</a>
+      <a href="monitor.html">智能监测</a>
+      <a href="tracking.html">运输地图</a>
+      <a href="geofence.html">围栏状态</a>
+    </nav>
+  </header>
+  <main class="portal-body">
+    <div class="page-title">
+      <div><h1>告警中心</h1><p>展示与确认 · 阈值请在网页后台配置</p></div>
+      <button class="btn btn-primary" data-toast="已确认选中告警">确认所选</button>
+    </div>
+    <div class="filters">
+      <select><option>全部级别</option><option>紧急</option><option>重要</option></select>
+      <select><option>全部类型</option><option>温度</option><option>库容</option><option>围栏</option></select>
+      <input placeholder="搜索仓库 / 设备" style="min-width:200px" />
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th></th><th>时间</th><th>类型</th><th>对象</th><th>实测 / 阈值</th><th>级别</th><th>状态</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><input type="checkbox" checked /></td>
+            <td>2026-10-15 14:28</td><td>温度超限</td><td>东区 A01</td>
+            <td>36.2℃ / ≤35℃</td><td><span class="badge danger">紧急</span></td>
+            <td><span class="badge warn">未处理</span></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" /></td>
+            <td>2026-10-15 09:12</td><td>库容预警</td><td>东区 A01</td>
+            <td>72% / 上限 85%</td><td><span class="badge warn">重要</span></td>
+            <td><span class="badge warn">未处理</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script src="../js/web.js"></script>
+</body>
+</html>

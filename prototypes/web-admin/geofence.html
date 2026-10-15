@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页后台 · 电子围栏</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="topnav">
+    <div class="brand">危废智控 <span style="background:#fdf0e9;color:var(--accent)">网页后台</span></div>
+    <nav>
+      <a href="../index.html">总览</a>
+      <a href="../web-portal/index.html">前台</a>
+      <a class="on" href="index.html">后台</a>
+      <a href="../app/index.html">APP</a>
+    </nav>
+  </header>
+  <div class="shell">
+    <aside class="side">
+      <div class="who"><strong>王管理</strong><small>系统管理员 · 全仓</small></div>
+      <div class="sec">组织权限</div>
+      <a href="users.html">人员管理</a>
+      <a href="roles.html">角色权限</a>
+      <div class="sec">数据管理录入</div>
+      <a href="warehouse.html">仓储开单</a>
+      <a href="materials.html">物资维护</a>
+      <a href="inventory.html">盘点任务</a>
+      <a href="thresholds.html">预警阈值</a>
+      <a href="units.html">运输单元</a>
+      <a href="checkin.html">打卡记录</a>
+      <a class="on" href="geofence.html">电子围栏</a>
+      <a href="devices.html">设备配置</a>
+      <div class="sec">概览</div>
+      <a href="index.html">后台首页</a>
+    </aside>
+    <main class="main">
+      <div class="page-title">
+        <div><h1>软电子围栏配置</h1><p>绘制与参数录入 · 前台/APP 只读展示状态</p></div>
+        <button class="btn btn-primary" data-toast="围栏已保存并下发">保存围栏</button>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="map" style="height:300px">
+            <div class="fence" style="width:160px;height:160px;left:28%;top:20%"></div>
+            <div class="pin" style="left:46%;top:42%"><span>仓</span></div>
+          </div>
+          <p class="note">支持圆形 / 多边形绘制（原型示意）</p>
+        </div>
+        <div class="card">
+          <div class="field"><label>目标单元</label><select><option>转运仓 T02</option><option>东区 A01</option></select></div>
+          <div class="field"><label>形状</label><select><option>圆形</option><option>多边形</option></select></div>
+          <div class="field"><label>半径（米）</label><input type="number" value="500" /></div>
+          <div class="field"><label>越界滞回（分钟）</label><input type="number" value="3" /></div>
+          <div class="field"><label>生效时段</label><select><option>全天</option><option>夜间</option></select></div>
+          <div class="perm-item on"><span>越界推送前台 + APP</span><div class="switch on"></div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../js/web.js"></script>
+</body>
+</html>

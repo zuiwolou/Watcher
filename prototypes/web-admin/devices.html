@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页后台 · 设备配置</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="topnav">
+    <div class="brand">危废智控 <span style="background:#fdf0e9;color:var(--accent)">网页后台</span></div>
+    <nav>
+      <a href="../index.html">总览</a>
+      <a href="../web-portal/index.html">前台</a>
+      <a class="on" href="index.html">后台</a>
+      <a href="../app/index.html">APP</a>
+    </nav>
+  </header>
+  <div class="shell">
+    <aside class="side">
+      <div class="who"><strong>王管理</strong><small>系统管理员 · 全仓</small></div>
+      <div class="sec">组织权限</div>
+      <a href="users.html">人员管理</a>
+      <a href="roles.html">角色权限</a>
+      <div class="sec">数据管理录入</div>
+      <a href="warehouse.html">仓储开单</a>
+      <a href="materials.html">物资维护</a>
+      <a href="inventory.html">盘点任务</a>
+      <a href="thresholds.html">预警阈值</a>
+      <a href="units.html">运输单元</a>
+      <a href="checkin.html">打卡记录</a>
+      <a href="geofence.html">电子围栏</a>
+      <a class="on" href="devices.html">设备配置</a>
+      <div class="sec">概览</div>
+      <a href="index.html">后台首页</a>
+    </aside>
+    <main class="main">
+      <div class="page-title">
+        <div><h1>监测设备与对接</h1><p>网关 / 传感器 / 摄像头注册 · 监管 OpenAPI 开关</p></div>
+        <button class="btn btn-primary" data-toast="设备注册成功">注册设备</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>设备 ID</th><th>类型</th><th>所属仓</th><th>链路</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td>GW-A01</td><td>IoT 网关</td><td>A01</td><td>公网 4G + 局域网备份</td><td><span class="badge ok">在线</span></td></tr>
+            <tr><td>TH-01</td><td>温湿度</td><td>A01</td><td>经网关 MQTT</td><td><span class="badge ok">在线</span></td></tr>
+            <tr><td>CAM-01</td><td>摄像头</td><td>A01 入口</td><td>ONVIF → HLS</td><td><span class="badge ok">在线</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>监管对接</h3>
+        <div class="perm-item on" style="max-width:420px"><span>启用 OpenAPI 推送台账/告警</span><div class="switch on"></div></div>
+        <p class="note">字段映射与证书配置属高级项，仅系统管理员。</p>
+      </div>
+    </main>
+  </div>
+  <script src="../js/web.js"></script>
+</body>
+</html>

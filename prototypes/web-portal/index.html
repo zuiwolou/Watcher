@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页前台 · 工作台</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="portal-top">
+    <div class="bar">
+      <div class="brand">危废智控 <em>网页前台</em></div>
+      <div class="meta">
+        <span>李值班 · 只读观察员</span>
+        <a href="../web-admin/index.html">后台管理</a>
+        <a href="../index.html">原型总览</a>
+      </div>
+    </div>
+    <nav class="portal-menu">
+      <a class="on" href="index.html">工作台</a>
+      <a href="alarms.html">告警中心</a>
+      <a href="materials.html">物资总览</a>
+      <a href="inventory.html">盘点报表</a>
+      <a href="monitor.html">智能监测</a>
+      <a href="tracking.html">运输地图</a>
+      <a href="geofence.html">围栏状态</a>
+    </nav>
+  </header>
+
+  <main class="portal-body">
+    <div class="page-title">
+      <div>
+        <h1>工作台</h1>
+        <p>上下布局 · 仅数据展示 · 打卡/扫码请在 APP 执行 · 主数据在后台录入</p>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="l">未处理告警</div><div class="v danger">3</div><div class="s">含 1 条紧急温度告警</div></div>
+      <div class="stat"><div class="l">在库物资</div><div class="v">128</div><div class="s">4.62 吨 · 库容 72%</div></div>
+      <div class="stat"><div class="l">在途单元</div><div class="v warn">2</div><div class="s">运输车 1 · 转运仓 1</div></div>
+      <div class="stat"><div class="l">仓体温度</div><div class="v danger">36.2°</div><div class="s">A01 超上限 35℃</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>最新告警 <a href="alarms.html">全部</a></h3>
+        <table>
+          <thead><tr><th>时间</th><th>类型</th><th>对象</th><th>级别</th></tr></thead>
+          <tbody>
+            <tr><td>14:28</td><td>温度超限</td><td>东区 A01</td><td><span class="badge danger">紧急</span></td></tr>
+            <tr><td>09:12</td><td>库容预警</td><td>东区 A01</td><td><span class="badge warn">重要</span></td></tr>
+            <tr><td>昨日 21:05</td><td>围栏越界</td><td>转运仓 T02</td><td><span class="badge info">已确认</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>环境监测快照 <a href="monitor.html">详情</a></h3>
+        <div class="chart">
+          <i style="height:40%"></i><i style="height:45%"></i><i style="height:50%"></i>
+          <i style="height:58%"></i><i style="height:70%"></i>
+          <i style="height:88%;background:linear-gradient(180deg,#b91c1c,#f87171)"></i>
+        </div>
+        <p class="note">湿度 62% 正常 · 水浸正常 · 入侵安全</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>运输态势 <a href="tracking.html">打开地图</a></h3>
+      <div class="map" style="height:220px">
+        <div class="road" style="left:0;right:0;top:48%;height:12px"></div>
+        <div class="road" style="top:0;bottom:0;left:40%;width:10px"></div>
+        <div class="pin truck" style="left:55%;top:40%"><span>车</span></div>
+        <div class="pin" style="left:30%;top:55%"><span>仓</span></div>
+      </div>
+      <p class="note">轨迹点由 APP 运输打卡实时写入。</p>
+    </div>
+  </main>
+  <script src="../js/web.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页前台 · 运输地图</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="portal-top">
+    <div class="bar">
+      <div class="brand">危废智控 <em>网页前台</em></div>
+      <div class="meta">
+        <span>李值班 · 只读观察员</span>
+        <a href="../web-admin/index.html">后台管理</a>
+        <a href="../index.html">原型总览</a>
+      </div>
+    </div>
+    <nav class="portal-menu">
+      <a href="index.html">工作台</a>
+      <a href="alarms.html">告警中心</a>
+      <a href="materials.html">物资总览</a>
+      <a href="inventory.html">盘点报表</a>
+      <a href="monitor.html">智能监测</a>
+      <a class="on" href="tracking.html">运输地图</a>
+      <a href="geofence.html">围栏状态</a>
+    </nav>
+  </header>
+  <main class="portal-body">
+    <div class="page-title">
+      <div><h1>运输定位地图</h1><p>只读全景 · 打卡由 APP 执行后轨迹在此展示</p></div>
+    </div>
+    <div class="card">
+      <div class="map">
+        <div class="road" style="left:0;right:0;top:48%;height:14px"></div>
+        <div class="road" style="top:0;bottom:0;left:38%;width:12px"></div>
+        <div class="pin truck" style="left:58%;top:42%"><span>车</span></div>
+        <div class="pin" style="left:28%;top:58%"><span>仓</span></div>
+      </div>
+      <table style="margin-top:12px">
+        <thead><tr><th>单元</th><th>状态</th><th>最近打卡</th><th></th></tr></thead>
+        <tbody>
+          <tr>
+            <td>粤B·D8231</td><td><span class="badge ok">在途</span></td>
+            <td>APP 途经打卡 14:35</td>
+            <td><button class="btn btn-secondary btn-sm" data-toast="轨迹回放">轨迹</button></td>
+          </tr>
+          <tr>
+            <td>转运仓 T02</td><td><span class="badge info">静止</span></td>
+            <td>—</td>
+            <td><button class="btn btn-secondary btn-sm">定位</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script src="../js/web.js"></script>
+</body>
+</html>

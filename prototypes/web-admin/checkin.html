@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页后台 · 打卡记录（只读审计）</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="topnav">
+    <div class="brand">危废智控 <span style="background:#fdf0e9;color:var(--accent)">网页后台</span></div>
+    <nav>
+      <a href="../index.html">总览</a>
+      <a href="../web-portal/index.html">前台</a>
+      <a class="on" href="index.html">后台</a>
+      <a href="../app/index.html">APP</a>
+    </nav>
+  </header>
+  <div class="shell">
+    <aside class="side">
+      <div class="who"><strong>王管理</strong><small>系统管理员 · 全仓</small></div>
+      <div class="sec">组织权限</div>
+      <a href="users.html">人员管理</a>
+      <a href="roles.html">角色权限</a>
+      <div class="sec">数据管理录入</div>
+      <a href="warehouse.html">仓储开单</a>
+      <a href="materials.html">物资维护</a>
+      <a href="inventory.html">盘点任务</a>
+      <a href="thresholds.html">预警阈值</a>
+      <a href="units.html">运输单元</a>
+      <a class="on" href="checkin.html">打卡记录</a>
+      <a href="geofence.html">电子围栏</a>
+      <a href="devices.html">设备配置</a>
+      <div class="sec">概览</div>
+      <a href="index.html">后台首页</a>
+    </aside>
+    <main class="main">
+      <div class="page-title">
+        <div>
+          <h1>运输打卡记录</h1>
+          <p>后台仅审计查看 · <strong>打卡扫码执行在管控 APP</strong></p>
+        </div>
+        <a class="btn btn-primary" href="../app/checkin.html">打开 APP 打卡原型</a>
+      </div>
+      <div class="card">
+        <p class="note" style="margin-top:0">现场「扫唯一码 + 拍照 + 定位」不在后台操作，避免与移动作业割裂。</p>
+        <table>
+          <thead><tr><th>时间</th><th>任务</th><th>唯一码</th><th>节点</th><th>执行人</th><th>来源</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>14:35</td><td>YS-20261015-07</td><td>…00102</td><td>途经</td><td>驾驶员·王强</td>
+              <td><span class="badge info">APP</span></td>
+            </tr>
+            <tr>
+              <td>08:20</td><td>YS-20261015-07</td><td>…00102</td><td>发车</td><td>驾驶员·王强</td>
+              <td><span class="badge info">APP</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  <script src="../js/web.js"></script>
+</body>
+</html>

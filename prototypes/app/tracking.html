@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>APP · 运输定位</title>
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body>
+  <div class="desk-bar">
+    <div><h1>APP · 运输定位（只读）</h1><p>地图查看单元位置；绑定设备在网页后台。</p></div>
+    <nav class="nav-pills">
+      <a href="../index.html">总览</a>
+      <a href="index.html">APP首页</a>
+      <a href="materials.html">物资</a>
+      <a href="alarms.html">告警</a>
+      <a href="monitor.html">监测</a>
+      <a class="active" href="tracking.html">定位</a>
+      <a href="geofence.html">围栏</a>
+    </nav>
+  </div>
+  <div class="stage">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>15:02</span><span class="icons">5G · 86%</span></div>
+        <div class="app-header">
+          <a class="back" href="index.html">←</a>
+          <h2>运输定位</h2>
+        </div>
+        <div class="content">
+          <div class="map-panel" style="height:300px">
+            <div class="road" style="left:0;right:0;top:48%;height:12px"></div>
+            <div class="road" style="top:0;bottom:0;left:40%;width:10px"></div>
+            <div class="pin truck" style="left:55%;top:40%"><span>车</span></div>
+            <div class="pin" style="left:30%;top:55%"><span>仓</span></div>
+          </div>
+          <div class="card">
+            <div class="row"><h4 style="margin:0">粤B·D8231</h4><span class="badge ok">在途</span></div>
+            <div class="meta">42km/h · 更新 14:35 · 只读轨迹</div>
+            <button class="btn btn-secondary" style="margin-top:8px" data-toast="轨迹回放（只读）">轨迹回放</button>
+          </div>
+        </div>
+        <nav class="tabbar">
+          <a href="index.html"><div class="ico">⌂</div>首页</a>
+          <a href="materials.html"><div class="ico">物</div>物资</a>
+          <a class="active" href="tracking.html"><div class="ico">运</div>定位</a>
+          <a href="monitor.html"><div class="ico">监</div>监测</a>
+          <a href="alarms.html"><div class="ico">警</div>告警</a>
+        </nav>
+      </div>
+    </div>
+  </div>
+  <script src="../js/app.js"></script>
+</body>
+</html>

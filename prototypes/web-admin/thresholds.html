@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页后台 · 预警阈值</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="topnav">
+    <div class="brand">危废智控 <span style="background:#fdf0e9;color:var(--accent)">网页后台</span></div>
+    <nav>
+      <a href="../index.html">总览</a>
+      <a href="../web-portal/index.html">前台</a>
+      <a class="on" href="index.html">后台</a>
+      <a href="../app/index.html">APP</a>
+    </nav>
+  </header>
+  <div class="shell">
+    <aside class="side">
+      <div class="who"><strong>王管理</strong><small>系统管理员 · 全仓</small></div>
+      <div class="sec">组织权限</div>
+      <a href="users.html">人员管理</a>
+      <a href="roles.html">角色权限</a>
+      <div class="sec">数据管理录入</div>
+      <a href="warehouse.html">仓储开单</a>
+      <a href="materials.html">物资维护</a>
+      <a href="inventory.html">盘点任务</a>
+      <a class="on" href="thresholds.html">预警阈值</a>
+      <a href="units.html">运输单元</a>
+      <a href="checkin.html">打卡记录</a>
+      <a href="geofence.html">电子围栏</a>
+      <a href="devices.html">设备配置</a>
+      <div class="sec">概览</div>
+      <a href="index.html">后台首页</a>
+    </aside>
+    <main class="main">
+      <div class="page-title">
+        <div><h1>预警阈值配置</h1><p>需 threshold:edit · 配置后规则引擎对前台/APP 推送告警</p></div>
+        <button class="btn btn-primary" data-toast="阈值已下发规则引擎">保存</button>
+      </div>
+      <div class="card" style="max-width:640px">
+        <div class="field"><label>仓库</label><select><option>东区 A01</option><option>西区 T02</option></select></div>
+        <div class="filters">
+          <div class="field" style="flex:1;margin:0"><label>温度下限 ℃</label><input type="number" value="5" /></div>
+          <div class="field" style="flex:1;margin:0"><label>温度上限 ℃</label><input type="number" value="35" /></div>
+        </div>
+        <div class="filters">
+          <div class="field" style="flex:1;margin:0"><label>湿度下限 %</label><input type="number" value="20" /></div>
+          <div class="field" style="flex:1;margin:0"><label>湿度上限 %</label><input type="number" value="75" /></div>
+        </div>
+        <div class="field"><label>库容量上限 %</label><input type="number" value="85" /></div>
+        <div class="perm-item on" style="margin-bottom:8px"><span>水浸立即告警</span><div class="switch on"></div></div>
+        <div class="perm-item on"><span>入侵立即告警</span><div class="switch on"></div></div>
+        <div class="field" style="margin-top:12px"><label>通知人员（按角色/人员）</label>
+          <select><option>安全员 + 仓管员（A01）</option></select>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../js/web.js"></script>
+</body>
+</html>

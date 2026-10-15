@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>APP · 入出库扫码</title>
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body>
+  <div class="desk-bar">
+    <div>
+      <h1>APP · 入/出库扫码确认（执行）</h1>
+      <p>单据由网页后台开立并发码，现场扫码完成上架或出库确认</p>
+    </div>
+    <nav class="nav-pills">
+      <a href="../index.html">总览</a>
+      <a href="index.html">APP首页</a>
+      <a href="checkin.html">打卡</a>
+      <a href="inventory.html">盘点</a>
+      <a class="active" href="scan-io.html">入出库</a>
+    </nav>
+  </div>
+  <div class="stage">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>15:20</span><span class="icons">5G · 86%</span></div>
+        <div class="app-header">
+          <a class="back" href="index.html">←</a>
+          <h2>入出库扫码</h2>
+        </div>
+        <div class="content">
+          <div class="chips">
+            <span class="chip on">入库上架</span>
+            <span class="chip">出库确认</span>
+          </div>
+          <div class="card">
+            <div class="row">
+              <h4 style="margin:0">入库单 RK-20261015-011</h4>
+              <span class="badge info">待扫码</span>
+            </div>
+            <div class="meta">后台已发码 36 件 · 本页扫码上架确认</div>
+          </div>
+          <div class="scan-frame" style="aspect-ratio:16/11">
+            <div class="box" style="width:42%"></div>
+            <p>扫描唯一码确认上架库位</p>
+          </div>
+          <div class="field">
+            <label>库位</label>
+            <input value="A-03-12" />
+          </div>
+          <div class="card">
+            <div class="list-item">
+              <div class="avatar">码</div>
+              <div style="flex:1">
+                <strong style="font-size:.82rem">…00012</strong>
+                <div class="meta">已扫 · 待提交</div>
+              </div>
+              <span class="badge ok">12/36</span>
+            </div>
+            <button class="btn btn-primary" data-toast="上架确认成功，库存已更新至前台">提交确认</button>
+          </div>
+          <p style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:8px">开单与发码请到网页后台办理</p>
+        </div>
+        <nav class="tabbar">
+          <a href="index.html"><div class="ico">⌂</div>首页</a>
+          <a class="active" href="checkin.html"><div class="ico">执</div>执行</a>
+          <a href="tracking.html"><div class="ico">运</div>定位</a>
+          <a href="monitor.html"><div class="ico">监</div>监测</a>
+          <a href="alarms.html"><div class="ico">警</div>告警</a>
+        </nav>
+      </div>
+    </div>
+  </div>
+  <script src="../js/app.js"></script>
+</body>
+</html>

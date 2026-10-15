@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页后台 · 运输单元</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="topnav">
+    <div class="brand">危废智控 <span style="background:#fdf0e9;color:var(--accent)">网页后台</span></div>
+    <nav>
+      <a href="../index.html">总览</a>
+      <a href="../web-portal/index.html">前台</a>
+      <a class="on" href="index.html">后台</a>
+      <a href="../app/index.html">APP</a>
+    </nav>
+  </header>
+  <div class="shell">
+    <aside class="side">
+      <div class="who"><strong>王管理</strong><small>系统管理员 · 全仓</small></div>
+      <div class="sec">组织权限</div>
+      <a href="users.html">人员管理</a>
+      <a href="roles.html">角色权限</a>
+      <div class="sec">数据管理录入</div>
+      <a href="warehouse.html">仓储开单</a>
+      <a href="materials.html">物资维护</a>
+      <a href="inventory.html">盘点任务</a>
+      <a href="thresholds.html">预警阈值</a>
+      <a class="on" href="units.html">运输单元</a>
+      <a href="checkin.html">打卡记录</a>
+      <a href="geofence.html">电子围栏</a>
+      <a href="devices.html">设备配置</a>
+      <div class="sec">概览</div>
+      <a href="index.html">后台首页</a>
+    </aside>
+    <main class="main">
+      <div class="page-title">
+        <div><h1>运输单元管理</h1><p>运输车 / 转运仓主数据 · 绑定定位设备</p></div>
+        <button class="btn btn-primary" data-toast="新建单元表单">新建单元</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>名称</th><th>类型</th><th>定位设备</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>粤B·D8231</td><td>运输车</td><td>GPS-8821</td><td><span class="badge ok">已绑定</span></td>
+              <td><button class="btn btn-secondary btn-sm" data-toast="已解绑">解绑</button></td>
+            </tr>
+            <tr>
+              <td>转运仓 T02</td><td>转运仓</td><td>BD-3307</td><td><span class="badge ok">已绑定</span></td>
+              <td><button class="btn btn-secondary btn-sm">编辑</button></td>
+            </tr>
+            <tr>
+              <td>粤B·F1092</td><td>运输车</td><td>—</td><td><span class="badge warn">未绑定</span></td>
+              <td><button class="btn btn-primary btn-sm" data-toast="绑定 GPS-9044 成功">绑定设备</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  <script src="../js/web.js"></script>
+</body>
+</html>

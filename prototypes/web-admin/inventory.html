@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页后台 · 库存盘点</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="topnav">
+    <div class="brand">危废智控 <span style="background:#fdf0e9;color:var(--accent)">网页后台</span></div>
+    <nav>
+      <a href="../index.html">总览</a>
+      <a href="../web-portal/index.html">前台</a>
+      <a class="on" href="index.html">后台</a>
+      <a href="../app/index.html">APP</a>
+    </nav>
+  </header>
+  <div class="shell">
+    <aside class="side">
+      <div class="who"><strong>王管理</strong><small>系统管理员 · 全仓</small></div>
+      <div class="sec">组织权限</div>
+      <a href="users.html">人员管理</a>
+      <a href="roles.html">角色权限</a>
+      <div class="sec">数据管理录入</div>
+      <a href="warehouse.html">仓储开单</a>
+      <a href="materials.html">物资维护</a>
+      <a class="on" href="inventory.html">盘点任务</a>
+      <a href="thresholds.html">预警阈值</a>
+      <a href="units.html">运输单元</a>
+      <a href="checkin.html">打卡记录</a>
+      <a href="geofence.html">电子围栏</a>
+      <a href="devices.html">设备配置</a>
+      <div class="sec">概览</div>
+      <a href="index.html">后台首页</a>
+    </aside>
+    <main class="main">
+      <div class="page-title">
+          <div><h1>盘点任务管理</h1><p>后台创建任务 · <strong>扫码实盘在 APP 执行</strong> · 完成后前台可看报表</p></div>
+        <button class="btn btn-primary" data-toast="已创建盘点任务，已下发 APP">新建盘点任务</button>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>新建 / 下发</h3>
+          <div class="field"><label>仓库</label><select><option>东区 A01</option><option>西区 T02</option></select></div>
+          <div class="field"><label>范围</label><select><option>全仓</option><option>库区 A</option></select></div>
+          <div class="field"><label>执行人</label><select><option>张仓管（APP）</option></select></div>
+          <button class="btn btn-primary" data-toast="任务 PD-20261015-01 已下发至 APP">创建并下发 APP</button>
+          <p class="note">实盘扫码不在后台操作，请使用 <a href="../app/inventory.html" style="color:var(--brand)">APP · 库存盘点</a>。</p>
+        </div>
+        <div class="card">
+          <h3>任务列表</h3>
+          <table>
+            <thead><tr><th>单号</th><th>进度</th><th>执行</th><th>状态</th></tr></thead>
+            <tbody>
+              <tr><td>PD-20261015-01</td><td>96/128</td><td>APP</td><td><span class="badge info">扫码中</span></td></tr>
+              <tr><td>PD-20260930-02</td><td>120/120</td><td>APP</td><td><span class="badge ok">已归档</span></td></tr>
+            </tbody>
+          </table>
+          <button class="btn btn-secondary" style="margin-top:10px" data-toast="已根据 APP 实盘生成报表">生成报表</button>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../js/web.js"></script>
+</body>
+</html>

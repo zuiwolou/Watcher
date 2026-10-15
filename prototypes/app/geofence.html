@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>APP · 围栏状态</title>
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body>
+  <div class="desk-bar">
+    <div><h1>APP · 围栏状态（只读）</h1><p>查看围栏与越界状态；绘制配置在网页后台。</p></div>
+    <nav class="nav-pills">
+      <a href="../index.html">总览</a>
+      <a href="index.html">APP首页</a>
+      <a href="materials.html">物资</a>
+      <a href="alarms.html">告警</a>
+      <a href="monitor.html">监测</a>
+      <a href="tracking.html">定位</a>
+      <a class="active" href="geofence.html">围栏</a>
+    </nav>
+  </div>
+  <div class="stage">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>15:02</span><span class="icons">5G · 86%</span></div>
+        <div class="app-header">
+          <a class="back" href="index.html">←</a>
+          <h2>围栏状态</h2>
+        </div>
+        <div class="content">
+          <div class="map-panel" style="height:240px">
+            <div class="fence" style="width:130px;height:130px;left:28%;top:28%"></div>
+            <div class="pin" style="left:46%;top:48%"><span>仓</span></div>
+          </div>
+          <div class="card">
+            <div class="row"><h4 style="margin:0">转运仓 T02</h4><span class="badge ok">围栏内</span></div>
+            <div class="meta">圆形 500m · 全天生效 · 不可编辑</div>
+          </div>
+          <a class="btn btn-ghost" href="../web-admin/geofence.html">去网页后台配置围栏</a>
+        </div>
+        <nav class="tabbar">
+          <a href="index.html"><div class="ico">⌂</div>首页</a>
+          <a href="materials.html"><div class="ico">物</div>物资</a>
+          <a href="tracking.html"><div class="ico">运</div>定位</a>
+          <a href="monitor.html"><div class="ico">监</div>监测</a>
+          <a href="alarms.html"><div class="ico">警</div>告警</a>
+        </nav>
+      </div>
+    </div>
+  </div>
+  <script src="../js/app.js"></script>
+</body>
+</html>

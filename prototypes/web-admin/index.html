@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页后台 · 控制台</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="topnav">
+    <div class="brand">危废智控 <span style="background:#fdf0e9;color:var(--accent)">网页后台</span></div>
+    <nav>
+      <a href="../index.html">总览</a>
+      <a href="../web-portal/index.html">前台</a>
+      <a class="on" href="index.html">后台</a>
+      <a href="../app/index.html">APP</a>
+    </nav>
+  </header>
+  <div class="shell">
+    <aside class="side">
+      <div class="who"><strong>王管理</strong><small>系统管理员 · 全仓</small></div>
+      <div class="sec">组织权限</div>
+      <a href="users.html">人员管理</a>
+      <a href="roles.html">角色权限</a>
+      <div class="sec">数据管理录入</div>
+      <a href="warehouse.html">仓储开单</a>
+      <a href="materials.html">物资维护</a>
+      <a href="inventory.html">盘点任务</a>
+      <a href="thresholds.html">预警阈值</a>
+      <a href="units.html">运输单元</a>
+      <a href="checkin.html">打卡记录</a>
+      <a href="geofence.html">电子围栏</a>
+      <a href="devices.html">设备配置</a>
+      <div class="sec">概览</div>
+      <a class="on" href="index.html">后台首页</a>
+    </aside>
+    <main class="main">
+      <div class="page-title">
+        <div>
+          <h1>管理控制台</h1>
+          <p>人员权限与主数据录入 · 打卡/盘点扫码等现场执行在 APP</p>
+        </div>
+        <div class="btn-row">
+          <a class="btn btn-secondary" href="../web-portal/index.html">数据前台</a>
+          <a class="btn btn-primary" href="../app/index.html">APP 执行端</a>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="l">启用人员</div><div class="v">18</div><div class="s">今日登录 7</div></div>
+        <div class="stat"><div class="l">角色数</div><div class="v">5</div><div class="s">含自定义 1</div></div>
+        <div class="stat"><div class="l">待审入库申报</div><div class="v warn">2</div></div>
+        <div class="stat"><div class="l">未绑定定位设备</div><div class="v">1</div></div>
+      </div>
+      <div class="grid-3">
+        <a class="card" href="users.html" style="display:block">
+          <h3>人员与权限</h3>
+          <p style="font-size:.85rem;color:var(--muted)">创建账号、分配角色、设置仓库数据范围，控制前台/后台/APP 可见功能。</p>
+        </a>
+        <a class="card" href="warehouse.html" style="display:block">
+          <h3>仓储与唯一码</h3>
+          <p style="font-size:.85rem;color:var(--muted)">入库申报、入出库开单、唯一码生成发放，写入台账供前台/APP 展示。</p>
+        </a>
+        <a class="card" href="geofence.html" style="display:block">
+          <h3>围栏与阈值</h3>
+          <p style="font-size:.85rem;color:var(--muted)">绘制软电子围栏、配置环境阈值；越界与超限自动推送至前台与 APP。</p>
+        </a>
+      </div>
+      <div class="card">
+        <h3>最近审计</h3>
+        <table>
+          <thead><tr><th>时间</th><th>操作人</th><th>动作</th><th>结果</th></tr></thead>
+          <tbody>
+            <tr><td>14:10</td><td>王管理</td><td>为「张仓管」绑定角色「仓管员」+ 仓 A01</td><td><span class="badge ok">成功</span></td></tr>
+            <tr><td>13:42</td><td>赵业务</td><td>入库开单 RK-20261015-011 · 发码 36</td><td><span class="badge ok">成功</span></td></tr>
+            <tr><td>11:05</td><td>钱安全</td><td>修改 A01 温度上限 35→34</td><td><span class="badge ok">成功</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  <script src="../js/web.js"></script>
+</body>
+</html>

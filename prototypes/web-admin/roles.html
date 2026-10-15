@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页后台 · 角色权限</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="topnav">
+    <div class="brand">危废智控 <span style="background:#fdf0e9;color:var(--accent)">网页后台</span></div>
+    <nav>
+      <a href="../index.html">总览</a>
+      <a href="../web-portal/index.html">前台</a>
+      <a class="on" href="index.html">后台</a>
+      <a href="../app/index.html">APP</a>
+    </nav>
+  </header>
+  <div class="shell">
+    <aside class="side">
+      <div class="who"><strong>王管理</strong><small>系统管理员 · 全仓</small></div>
+      <div class="sec">组织权限</div>
+      <a href="users.html">人员管理</a>
+      <a class="on" href="roles.html">角色权限</a>
+      <div class="sec">数据管理录入</div>
+      <a href="warehouse.html">仓储开单</a>
+      <a href="materials.html">物资维护</a>
+      <a href="inventory.html">盘点任务</a>
+      <a href="thresholds.html">预警阈值</a>
+      <a href="units.html">运输单元</a>
+      <a href="checkin.html">打卡记录</a>
+      <a href="geofence.html">电子围栏</a>
+      <a href="devices.html">设备配置</a>
+      <div class="sec">概览</div>
+      <a href="index.html">后台首页</a>
+    </aside>
+    <main class="main">
+      <div class="page-title">
+        <div><h1>角色与功能权限</h1><p>为角色勾选权限点，人员继承角色后即可使用对应功能</p></div>
+        <button class="btn btn-primary" data-toast="新建自定义角色">新建角色</button>
+      </div>
+      <div class="filters">
+        <button class="btn btn-secondary btn-sm">系统管理员</button>
+        <button class="btn btn-primary btn-sm">仓管员</button>
+        <button class="btn btn-secondary btn-sm">安全员</button>
+        <button class="btn btn-secondary btn-sm">业务管理员</button>
+        <button class="btn btn-secondary btn-sm">只读观察员</button>
+      </div>
+      <div class="card">
+        <h3>权限矩阵 · 仓管员 <span class="badge info">预置</span></h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">资源:动作 · 开启后侧栏菜单与按钮可见；APP 仅下发 view 类能力</p>
+        <div class="perm-grid">
+          <div class="perm-item on"><span>material:view 物资查看</span><div class="switch on"></div></div>
+          <div class="perm-item on"><span>material:edit 物资维护</span><div class="switch on"></div></div>
+          <div class="perm-item on"><span>inbound:edit 入库开单</span><div class="switch on"></div></div>
+          <div class="perm-item on"><span>outbound:edit 出库开单</span><div class="switch on"></div></div>
+          <div class="perm-item on"><span>code:issue 唯一码发放</span><div class="switch on"></div></div>
+          <div class="perm-item on"><span>inventory:create 盘点任务(后台)</span><div class="switch on"></div></div>
+          <div class="perm-item on"><span>inventory:scan 盘点扫码(APP)</span><div class="switch on"></div></div>
+          <div class="perm-item on"><span>checkin:exec 运输打卡(APP)</span><div class="switch on"></div></div>
+          <div class="perm-item on"><span>alarm:view 告警查看</span><div class="switch on"></div></div>
+          <div class="perm-item on"><span>alarm:ack 告警确认</span><div class="switch on"></div></div>
+          <div class="perm-item"><span>threshold:edit 阈值配置</span><div class="switch"></div></div>
+          <div class="perm-item"><span>geofence:edit 围栏配置</span><div class="switch"></div></div>
+          <div class="perm-item"><span>unit:edit 单元管理</span><div class="switch"></div></div>
+          <div class="perm-item"><span>user:edit 人员管理</span><div class="switch"></div></div>
+          <div class="perm-item on"><span>admin:access 进入后台</span><div class="switch on"></div></div>
+          <div class="perm-item on"><span>portal:access 进入前台</span><div class="switch on"></div></div>
+          <div class="perm-item on"><span>app:access 登录 APP</span><div class="switch on"></div></div>
+        </div>
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn btn-primary" data-toast="角色权限已保存">保存权限</button>
+          <button class="btn btn-secondary" data-toast="预览：后台开单/盘点任务；APP 可盘点扫码与打卡；前台顶栏只读">预览菜单</button>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../js/web.js"></script>
+</body>
+</html>

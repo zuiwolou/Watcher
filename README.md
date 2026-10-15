@@ -1,41 +1,31 @@
-# 智能危废管控系统 — 设计交付包
+# 智能危废管控系统 — 设计交付包（V2.1）
 
-面向废铅蓄电池暂存仓的全场景监控与转运管控：**系统设计文档 + APP 高保真原型**。
+## 三端职责
 
-## 交付物
+| 端 | 职责 | 布局 / 入口 |
+| --- | --- | --- |
+| **网页前台** | 仅数据展示（告警、物资、监测、定位、围栏等） | **上下结构：顶栏菜单** · [web-portal](prototypes/web-portal/index.html) |
+| **网页后台** | 人员权限 + 主数据/单据录入配置（不做打卡扫码） | 左侧管理台 · [web-admin](prototypes/web-admin/index.html) |
+| **管控 APP** | 展示 + **现场执行**（运输打卡、盘点扫码、入出库扫码） | 移动端 · [app](prototypes/app/index.html) |
 
-| 内容 | 路径 |
-| --- | --- |
-| 系统设计文档（架构 / 组网 / 九大模块 / 接口 / 部署 / 监管对接） | [docs/智能危废管控系统设计文档.md](docs/智能危废管控系统设计文档.md) |
-| 架构与组网示意图补充 | [docs/架构与组网示意图.md](docs/架构与组网示意图.md) |
-| APP 原型入口 | [prototypes/index.html](prototypes/index.html) |
+总导航：[prototypes/index.html](prototypes/index.html)
 
-## 快速查看原型
+## 协作关系
 
-用浏览器直接打开 `prototypes/index.html`（无需构建）。顶部导航可切换九大功能模块页面。
+```
+后台开单/建盘点任务/绑车辆/配阈值围栏
+        ↓
+APP 扫码打卡 · 盘点实盘 · 入出库确认
+        ↓
+前台（顶栏）实时展示告警、库存、轨迹、报表
+```
 
-| 模块 | 页面 |
-| --- | --- |
-| 首页总览 | `prototypes/index.html` |
-| 仓储管理 | `prototypes/pages/warehouse.html` |
-| 物资管理 | `prototypes/pages/materials.html` |
-| 库存盘点 | `prototypes/pages/inventory.html` |
-| 预警管理 | `prototypes/pages/alerts.html` |
-| 运输打卡 | `prototypes/pages/checkin.html` |
-| 运输单元管理 | `prototypes/pages/units.html` |
-| 运输定位跟踪 | `prototypes/pages/tracking.html` |
-| 软电子围栏 | `prototypes/pages/geofence.html` |
-| 智能监测 | `prototypes/pages/monitor.html` |
+## 人员权限
 
-## 设计覆盖要点
+- RBAC：人员 ↔ 角色 ↔ 权限点 + 仓库范围  
+- 原型：[人员管理](prototypes/web-admin/users.html) · [角色权限](prototypes/web-admin/roles.html)
 
-1. **多模组网**：局域网 / 物联网 / 公网灵活部署，传感器→网关→MQTT→后台→APP 全链路。
-2. **后台与 APP**：HTTPS REST + WSS 推送 + JWT；设备侧 MQTTS Topic 规范。
-3. **九大 APP 模块**：交互逻辑、操作流程、数据流转均在设计文档第 5 章与对应原型中体现。
-4. **合规与对接**：台账、联单字段、告警与轨迹摘要；预留 `/api/v1/open/` 监管 OpenAPI。
+## 文档
 
-## 建议下一步
-
-- 评审设计文档后冻结接口字段与唯一码规则  
-- 按原型进行 UI 视觉精修与真机扫码/地图 SDK 联调  
-- 选定试点仓体完成组网勘测与网关开箱流程验证  
+- [系统设计文档 V2.1](docs/智能危废管控系统设计文档.md)
+- [架构与组网示意图](docs/架构与组网示意图.md)

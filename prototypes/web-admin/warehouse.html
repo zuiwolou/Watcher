@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页后台 · 仓储开单</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="topnav">
+    <div class="brand">危废智控 <span style="background:#fdf0e9;color:var(--accent)">网页后台</span></div>
+    <nav>
+      <a href="../index.html">总览</a>
+      <a href="../web-portal/index.html">前台</a>
+      <a class="on" href="index.html">后台</a>
+      <a href="../app/index.html">APP</a>
+    </nav>
+  </header>
+  <div class="shell">
+    <aside class="side">
+      <div class="who"><strong>王管理</strong><small>系统管理员 · 全仓</small></div>
+      <div class="sec">组织权限</div>
+      <a href="users.html">人员管理</a>
+      <a href="roles.html">角色权限</a>
+      <div class="sec">数据管理录入</div>
+      <a class="on" href="warehouse.html">仓储开单</a>
+      <a href="materials.html">物资维护</a>
+      <a href="inventory.html">盘点任务</a>
+      <a href="thresholds.html">预警阈值</a>
+      <a href="units.html">运输单元</a>
+      <a href="checkin.html">打卡记录</a>
+      <a href="geofence.html">电子围栏</a>
+      <a href="devices.html">设备配置</a>
+      <div class="sec">概览</div>
+      <a href="index.html">后台首页</a>
+    </aside>
+    <main class="main">
+      <div class="page-title">
+        <div><h1>仓储管理 · 开单录入</h1><p>后台制单发码 · 现场扫码上架/出库确认在 APP 执行</p></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>入库申报</h3>
+          <div class="field"><label>目标暂存仓</label><select><option>东区 A01</option><option>西区 T02</option></select></div>
+          <div class="field"><label>产生单位</label><input value="某汽修连锁（深圳）有限公司" /></div>
+          <div class="field"><label>危废代码</label><input value="HW31 · 废铅蓄电池" /></div>
+          <div class="filters">
+            <div class="field" style="flex:1;margin:0"><label>数量（件）</label><input type="number" value="36" /></div>
+            <div class="field" style="flex:1;margin:0"><label>重量（吨）</label><input type="number" value="1.28" step="0.01" /></div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:8px" data-toast="申报单 SB-20261015-004 已提交">提交申报</button>
+        </div>
+        <div class="card">
+          <h3>入库开单 · 发码</h3>
+          <div class="field"><label>关联申报单</label><select><option>SB-20261015-003（已通过）</option></select></div>
+          <div class="field"><label>唯一码生成</label><select><option>按件生成</option><option>按托盘生成</option></select></div>
+          <div class="btn-row">
+            <button class="btn btn-secondary" data-toast="已生成 36 个唯一码">生成唯一码</button>
+            <button class="btn btn-primary" data-toast="入库完成，库存已同步至前台/APP">确认入库</button>
+          </div>
+          <p class="note">出库开单可填写转移联单号，供监管对接。</p>
+          <div class="field" style="margin-top:12px"><label>出库 · 联单号</label><input placeholder="YF…" value="YF20261015018" /></div>
+          <button class="btn btn-secondary" data-toast="出库单已创建，物资状态→在途">确认出库</button>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../js/web.js"></script>
+</body>
+</html>

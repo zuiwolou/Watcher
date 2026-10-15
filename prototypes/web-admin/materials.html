@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页后台 · 物资维护</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="topnav">
+    <div class="brand">危废智控 <span style="background:#fdf0e9;color:var(--accent)">网页后台</span></div>
+    <nav>
+      <a href="../index.html">总览</a>
+      <a href="../web-portal/index.html">前台</a>
+      <a class="on" href="index.html">后台</a>
+      <a href="../app/index.html">APP</a>
+    </nav>
+  </header>
+  <div class="shell">
+    <aside class="side">
+      <div class="who"><strong>王管理</strong><small>系统管理员 · 全仓</small></div>
+      <div class="sec">组织权限</div>
+      <a href="users.html">人员管理</a>
+      <a href="roles.html">角色权限</a>
+      <div class="sec">数据管理录入</div>
+      <a href="warehouse.html">仓储开单</a>
+      <a class="on" href="materials.html">物资维护</a>
+      <a href="inventory.html">盘点任务</a>
+      <a href="thresholds.html">预警阈值</a>
+      <a href="units.html">运输单元</a>
+      <a href="checkin.html">打卡记录</a>
+      <a href="geofence.html">电子围栏</a>
+      <a href="devices.html">设备配置</a>
+      <div class="sec">概览</div>
+      <a href="index.html">后台首页</a>
+    </aside>
+    <main class="main">
+      <div class="page-title">
+        <div><h1>物资数据维护</h1><p>档案录入、库位调整、台账修正（需 material:edit）</p></div>
+        <button class="btn btn-primary" data-toast="打开物资录入表单">录入物资</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>唯一码</th><th>名称</th><th>仓库/库位</th><th>重量</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>HW31-…-00088</td><td>废铅蓄电池</td><td>A01 / B-02-06</td><td>0.036t</td><td><span class="badge ok">在库</span></td>
+              <td class="btn-row"><button class="btn btn-secondary btn-sm">编辑</button><button class="btn btn-secondary btn-sm">调库位</button></td>
+            </tr>
+            <tr>
+              <td>HW31-…-00102</td><td>废铅蓄电池</td><td>A01 / A-03-12</td><td>0.034t</td><td><span class="badge ok">在库</span></td>
+              <td class="btn-row"><button class="btn btn-secondary btn-sm">编辑</button><button class="btn btn-secondary btn-sm">调库位</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="note">前台与 APP 仅能查询，不能在此之外修改库存。</p>
+      </div>
+    </main>
+  </div>
+  <script src="../js/web.js"></script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>网页前台 · 围栏状态</title>
+  <link rel="stylesheet" href="../css/web.css" />
+</head>
+<body>
+  <header class="portal-top">
+    <div class="bar">
+      <div class="brand">危废智控 <em>网页前台</em></div>
+      <div class="meta">
+        <span>李值班 · 只读观察员</span>
+        <a href="../web-admin/index.html">后台管理</a>
+        <a href="../index.html">原型总览</a>
+      </div>
+    </div>
+    <nav class="portal-menu">
+      <a href="index.html">工作台</a>
+      <a href="alarms.html">告警中心</a>
+      <a href="materials.html">物资总览</a>
+      <a href="inventory.html">盘点报表</a>
+      <a href="monitor.html">智能监测</a>
+      <a href="tracking.html">运输地图</a>
+      <a class="on" href="geofence.html">围栏状态</a>
+    </nav>
+  </header>
+  <main class="portal-body">
+    <div class="page-title">
+      <div><h1>软电子围栏状态</h1><p>只读 · 绘制配置在网页后台</p></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>转运仓 T02 · 500m</h3>
+        <div class="map" style="height:260px">
+          <div class="fence" style="width:150px;height:150px;left:30%;top:22%"></div>
+          <div class="pin" style="left:48%;top:45%"><span>仓</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>越界事件</h3>
+        <table>
+          <thead><tr><th>时间</th><th>对象</th><th>偏移</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td>10-14 21:05</td><td>T02</td><td>320m</td><td><span class="badge ok">已确认</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <script src="../js/web.js"></script>
+</body>
+</html>
