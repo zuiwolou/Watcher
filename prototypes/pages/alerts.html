@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>预警管理 — 原型</title>
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body>
+  <div class="desk-bar">
+    <div>
+      <h1>④ 预警管理</h1>
+      <p>自定义温湿度、库容等阈值；达阈值推送提醒与告警。</p>
+    </div>
+    <nav class="nav-pills">
+      <a href="../index.html">首页</a>
+      <a href="warehouse.html">仓储</a>
+      <a href="materials.html">物资</a>
+      <a href="inventory.html">盘点</a>
+      <a class="active" href="alerts.html">预警</a>
+      <a href="checkin.html">打卡</a>
+      <a href="units.html">单元</a>
+      <a href="tracking.html">定位</a>
+      <a href="geofence.html">围栏</a>
+      <a href="monitor.html">监测</a>
+    </nav>
+  </div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>14:36</span><span class="icons">5G · 86%</span></div>
+        <div class="app-header">
+          <a class="back" href="../index.html">←</a>
+          <h2>预警管理</h2>
+          <a class="action" href="#history">历史</a>
+        </div>
+        <div class="content">
+          <div class="chips">
+            <span class="chip on">阈值配置</span>
+            <span class="chip">推送设置</span>
+            <span class="chip">告警列表</span>
+          </div>
+
+          <div class="card">
+            <div class="row">
+              <h4 style="margin:0">东区暂存仓 A01</h4>
+              <span class="badge ok">规则已启用</span>
+            </div>
+            <div class="field" style="margin-top:10px">
+              <label>温度下限 / 上限（℃）</label>
+              <div class="btn-row">
+                <input type="number" value="5" />
+                <input type="number" value="35" />
+              </div>
+            </div>
+            <div class="field">
+              <label>湿度下限 / 上限（%RH）</label>
+              <div class="btn-row">
+                <input type="number" value="20" />
+                <input type="number" value="75" />
+              </div>
+            </div>
+            <div class="field">
+              <label>库容量上限（%）</label>
+              <input type="number" value="85" />
+            </div>
+            <div class="row" style="margin:8px 0">
+              <span style="font-size:0.82rem">水浸立即告警</span>
+              <div class="switch on"></div>
+            </div>
+            <div class="row" style="margin:8px 0 12px">
+              <span style="font-size:0.82rem">入侵立即告警</span>
+              <div class="switch on"></div>
+            </div>
+            <div class="field">
+              <label>告警级别默认</label>
+              <select><option>重要</option><option>一般</option><option>紧急</option></select>
+            </div>
+            <button class="btn btn-primary" data-toast="阈值已保存并下发规则引擎">保存阈值</button>
+          </div>
+
+          <div class="card" id="history">
+            <h4>实时 / 历史告警</h4>
+            <div class="list-item">
+              <div class="avatar" style="background:#fef2f2;color:#b91c1c">温</div>
+              <div style="flex:1">
+                <div class="row"><strong style="font-size:0.82rem">温度超上限</strong><span class="badge danger">紧急</span></div>
+                <div class="meta">实测 36.2℃ &gt; 35℃ · 14:28<br/>已推送：仓管张工、安全员李工</div>
+              </div>
+            </div>
+            <div class="list-item">
+              <div class="avatar" style="background:#ffedd5;color:#b45309">容</div>
+              <div style="flex:1">
+                <div class="row"><strong style="font-size:0.82rem">库容接近上限</strong><span class="badge warn">重要</span></div>
+                <div class="meta">占用 72% · 预警线 85% · 今日 09:12</div>
+              </div>
+            </div>
+            <div class="list-item">
+              <div class="avatar" style="background:#dbeafe;color:#1d4f91">栏</div>
+              <div style="flex:1">
+                <div class="row"><strong style="font-size:0.82rem">转运仓越界</strong><span class="badge info">已确认</span></div>
+                <div class="meta">T02 偏离围栏 320m · 昨日 21:05</div>
+              </div>
+            </div>
+            <button class="btn btn-ghost" data-toast="告警已确认并转监测工单">确认并转工单</button>
+          </div>
+        </div>
+        <nav class="tabbar">
+          <a href="../index.html"><div class="ico">⌂</div>首页</a>
+          <a href="warehouse.html"><div class="ico">仓</div>仓储</a>
+          <a href="tracking.html"><div class="ico">运</div>运输</a>
+          <a class="active" href="monitor.html"><div class="ico">监</div>监测</a>
+          <a href="#"><div class="ico">我</div>我的</a>
+        </nav>
+      </div>
+    </div>
+
+    <aside class="flow-note">
+      <span class="tag">触发链路</span>
+      <h3>阈值 → 规则引擎 → 推送</h3>
+      <ol>
+        <li>APP 保存阈值至后台规则引擎</li>
+        <li>传感器/库存事件实时比对</li>
+        <li>生成告警记录并推送 APP</li>
+        <li>深链至监测页或告警详情</li>
+        <li>支持确认、静默时段、分级通知</li>
+      </ol>
+    </aside>
+  </div>
+  <script src="../js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>运输单元管理 — 原型</title>
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body>
+  <div class="desk-bar">
+    <div>
+      <h1>⑥ 运输单元管理</h1>
+      <p>运输车 / 转运仓两类单元；绑定定位设备实现跟踪基础能力。</p>
+    </div>
+    <nav class="nav-pills">
+      <a href="../index.html">首页</a>
+      <a href="warehouse.html">仓储</a>
+      <a href="materials.html">物资</a>
+      <a href="inventory.html">盘点</a>
+      <a href="alerts.html">预警</a>
+      <a href="checkin.html">打卡</a>
+      <a class="active" href="units.html">单元</a>
+      <a href="tracking.html">定位</a>
+      <a href="geofence.html">围栏</a>
+      <a href="monitor.html">监测</a>
+    </nav>
+  </div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>14:36</span><span class="icons">5G · 86%</span></div>
+        <div class="app-header">
+          <a class="back" href="../index.html">←</a>
+          <h2>运输单元</h2>
+          <a class="action" href="#" data-toast="进入新建运输单元表单">新建</a>
+        </div>
+        <div class="content">
+          <div class="chips">
+            <span class="chip on">全部</span>
+            <span class="chip">运输车</span>
+            <span class="chip">转运仓</span>
+            <span class="chip">未绑定</span>
+          </div>
+
+          <div class="card">
+            <div class="list-item">
+              <div class="avatar" style="background:#fdf0e9;color:#c45c26">车</div>
+              <div style="flex:1">
+                <div class="row"><strong style="font-size:0.85rem">粤B·D8231</strong><span class="badge ok">在途</span></div>
+                <div class="meta">运输车 · 载重 5t · 驾驶员 王强<br/>定位设备 GPS-8821 · 已绑定</div>
+              </div>
+            </div>
+            <div class="btn-row">
+              <a class="btn btn-secondary btn-sm" href="tracking.html">看位置</a>
+              <button class="btn btn-ghost btn-sm" data-toast="已解绑 GPS-8821">解绑设备</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="list-item">
+              <div class="avatar">仓</div>
+              <div style="flex:1">
+                <div class="row"><strong style="font-size:0.85rem">转运仓 T02</strong><span class="badge info">驻场</span></div>
+                <div class="meta">可移动转运仓 · 容积 18m³<br/>定位设备 BD-3307 · 已绑定</div>
+              </div>
+            </div>
+            <div class="btn-row">
+              <a class="btn btn-secondary btn-sm" href="geofence.html">设围栏</a>
+              <a class="btn btn-primary btn-sm" href="tracking.html">跟踪</a>
+            </div>
+          </div>
+
+          <div class="card">
+            <h4>绑定定位设备</h4>
+            <div class="field">
+              <label>选择单元</label>
+              <select><option>粤B·F1092（未绑定）</option><option>转运仓 T03</option></select>
+            </div>
+            <div class="field">
+              <label>设备 ID（扫描或输入）</label>
+              <input placeholder="如 GPS-9xxx / BD-xxxx" value="GPS-9044" />
+            </div>
+            <div class="row" style="margin-bottom:12px">
+              <span style="font-size:0.82rem">启用实时跟踪</span>
+              <div class="switch on"></div>
+            </div>
+            <button class="btn btn-primary" data-toast="绑定成功，定位数据将关联至该单元">确认绑定</button>
+          </div>
+        </div>
+        <nav class="tabbar">
+          <a href="../index.html"><div class="ico">⌂</div>首页</a>
+          <a href="warehouse.html"><div class="ico">仓</div>仓储</a>
+          <a class="active" href="tracking.html"><div class="ico">运</div>运输</a>
+          <a href="monitor.html"><div class="ico">监</div>监测</a>
+          <a href="#"><div class="ico">我</div>我的</a>
+        </nav>
+      </div>
+    </div>
+
+    <aside class="flow-note">
+      <span class="tag">管理逻辑</span>
+      <h3>单元主数据 ↔ 定位终端</h3>
+      <ol>
+        <li>运输车：车牌、载重、驾驶员</li>
+        <li>转运仓：仓号、容积、隶属关系</li>
+        <li>扫码/录入设备 ID 完成绑定</li>
+        <li>设备定位上报映射为单元位置</li>
+      </ol>
+    </aside>
+  </div>
+  <script src="../js/app.js"></script>
+</body>
+</html>

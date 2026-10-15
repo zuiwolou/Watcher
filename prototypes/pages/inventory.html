@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>库存盘点 — 原型</title>
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body>
+  <div class="desk-bar">
+    <div>
+      <h1>③ 库存盘点</h1>
+      <p>选择仓库扫码盘点，自动生成标准报表并导出。</p>
+    </div>
+    <nav class="nav-pills">
+      <a href="../index.html">首页</a>
+      <a href="warehouse.html">仓储</a>
+      <a href="materials.html">物资</a>
+      <a class="active" href="inventory.html">盘点</a>
+      <a href="alerts.html">预警</a>
+      <a href="checkin.html">打卡</a>
+      <a href="units.html">单元</a>
+      <a href="tracking.html">定位</a>
+      <a href="geofence.html">围栏</a>
+      <a href="monitor.html">监测</a>
+    </nav>
+  </div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>14:36</span><span class="icons">5G · 86%</span></div>
+        <div class="app-header">
+          <a class="back" href="../index.html">←</a>
+          <h2>库存盘点</h2>
+          <a class="action" href="#" data-toast="盘点报表 PD-20261015-01.pdf 已生成">导出</a>
+        </div>
+        <div class="content">
+          <div class="card">
+            <h4>新建盘点任务</h4>
+            <div class="field">
+              <label>目标仓库</label>
+              <select><option>东区暂存仓 A01</option><option>西区转运仓 T02</option></select>
+            </div>
+            <div class="field">
+              <label>盘点范围</label>
+              <select><option>全仓</option><option>仅库区 A</option><option>仅库区 B</option></select>
+            </div>
+            <button class="btn btn-primary" data-toast="已拉取账面应盘清单 128 件">开始盘点</button>
+          </div>
+
+          <div class="card">
+            <div class="row">
+              <h4 style="margin:0">进行中 · PD-20261015-01</h4>
+              <span class="badge info">扫码中</span>
+            </div>
+            <div class="meta">应盘 128 · 已盘 96 · 差异 2</div>
+            <div class="progress-bar"><span style="width:75%"></span></div>
+            <div class="scan-frame" style="margin-top:10px;aspect-ratio:16/11">
+              <div class="box" style="width:42%"></div>
+              <p>对准危废唯一码连续扫码</p>
+            </div>
+            <div class="list-item">
+              <div class="avatar" style="background:#dcfce7;color:#15803d">符</div>
+              <div style="flex:1">
+                <strong style="font-size:0.82rem">…00088</strong>
+                <div class="meta">账面 1 · 实盘 1</div>
+              </div>
+              <span class="badge ok">相符</span>
+            </div>
+            <div class="list-item">
+              <div class="avatar" style="background:#fef2f2;color:#b91c1c">亏</div>
+              <div style="flex:1">
+                <strong style="font-size:0.82rem">…00021</strong>
+                <div class="meta">账面 1 · 实盘 0 · 待复盘</div>
+              </div>
+              <span class="badge danger">盘亏</span>
+            </div>
+            <div class="list-item">
+              <div class="avatar" style="background:#ffedd5;color:#b45309">盈</div>
+              <div style="flex:1">
+                <strong style="font-size:0.82rem">…00155</strong>
+                <div class="meta">账面 0 · 实盘 1 · 未入库码</div>
+              </div>
+              <span class="badge warn">盘盈</span>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-secondary btn-sm" data-toast="已保存草稿，可稍后继续">暂存</button>
+              <button class="btn btn-primary btn-sm" data-toast="已提交，标准化盘点报表已归档">提交报表</button>
+            </div>
+          </div>
+        </div>
+        <nav class="tabbar">
+          <a href="../index.html"><div class="ico">⌂</div>首页</a>
+          <a class="active" href="warehouse.html"><div class="ico">仓</div>仓储</a>
+          <a href="tracking.html"><div class="ico">运</div>运输</a>
+          <a href="monitor.html"><div class="ico">监</div>监测</a>
+          <a href="#"><div class="ico">我</div>我的</a>
+        </nav>
+      </div>
+    </div>
+
+    <aside class="flow-note">
+      <span class="tag">操作流程</span>
+      <h3>应盘快照 → 实盘 → 报表</h3>
+      <ol>
+        <li>创建任务时冻结账面应盘清单</li>
+        <li>扫码写入实盘，实时比对差异</li>
+        <li>提交生成 PDF/Excel 标准报表</li>
+        <li>盘盈盘亏可转复盘或调整审批</li>
+      </ol>
+    </aside>
+  </div>
+  <script src="../js/app.js"></script>
+</body>
+</html>

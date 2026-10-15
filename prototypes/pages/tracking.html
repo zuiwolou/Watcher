@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>运输定位跟踪 — 原型</title>
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body>
+  <div class="desk-bar">
+    <div>
+      <h1>⑦ 运输定位跟踪</h1>
+      <p>内置地图实时展示全部运输单元位置，全景可视化。</p>
+    </div>
+    <nav class="nav-pills">
+      <a href="../index.html">首页</a>
+      <a href="warehouse.html">仓储</a>
+      <a href="materials.html">物资</a>
+      <a href="inventory.html">盘点</a>
+      <a href="alerts.html">预警</a>
+      <a href="checkin.html">打卡</a>
+      <a href="units.html">单元</a>
+      <a class="active" href="tracking.html">定位</a>
+      <a href="geofence.html">围栏</a>
+      <a href="monitor.html">监测</a>
+    </nav>
+  </div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>14:36</span><span class="icons">5G · 86%</span></div>
+        <div class="app-header">
+          <a class="back" href="../index.html">←</a>
+          <h2>定位跟踪</h2>
+          <a class="action" href="#" data-toast="已刷新全部单元位置">刷新</a>
+        </div>
+        <div class="content" style="padding-bottom:96px">
+          <div class="chips">
+            <span class="chip on">全部</span>
+            <span class="chip">在途</span>
+            <span class="chip">静止</span>
+            <span class="chip">离线</span>
+          </div>
+
+          <div class="map-panel" style="height:320px">
+            <div class="road" style="left:0;right:0;top:48%;height:14px"></div>
+            <div class="road" style="top:0;bottom:0;left:38%;width:12px"></div>
+            <div class="road" style="top:22%;left:38%;right:10%;height:10px"></div>
+            <div class="pin truck" style="left:58%;top:42%"><span>车</span></div>
+            <div class="pin" style="left:28%;top:58%"><span>仓</span></div>
+            <div class="pin truck" style="left:72%;top:18%;background:#1d4f91"><span>车</span></div>
+            <div style="position:absolute;left:10px;bottom:10px;background:rgba(255,255,255,0.92);padding:6px 10px;border-radius:8px;font-size:0.68rem;color:#4a6278">
+              在线 5 · 离线 1 · 15s 刷新
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:-4px">
+            <div class="row">
+              <h4 style="margin:0">粤B·D8231</h4>
+              <span class="badge ok">运动 42km/h</span>
+            </div>
+            <div class="meta">更新于 14:35:48 · 距目的地约 18km<br/>关联任务 YS-20261015-07</div>
+            <div class="btn-row">
+              <a class="btn btn-secondary btn-sm" href="checkin.html">去打卡</a>
+              <button class="btn btn-primary btn-sm" data-toast="进入轨迹回放：今日 08:20 起">轨迹回放</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="list-item">
+              <div class="avatar">仓</div>
+              <div style="flex:1">
+                <div class="row"><strong style="font-size:0.82rem">转运仓 T02</strong><span class="badge info">静止</span></div>
+                <div class="meta">东区场站内 · 围栏内</div>
+              </div>
+            </div>
+            <div class="list-item">
+              <div class="avatar" style="background:#f1f5f9;color:#7a8fa3">车</div>
+              <div style="flex:1">
+                <div class="row"><strong style="font-size:0.82rem">粤B·F1092</strong><span class="badge neutral">离线</span></div>
+                <div class="meta">最后位置 昨日 22:11 · 设备未上报</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <nav class="tabbar">
+          <a href="../index.html"><div class="ico">⌂</div>首页</a>
+          <a href="warehouse.html"><div class="ico">仓</div>仓储</a>
+          <a class="active" href="tracking.html"><div class="ico">运</div>运输</a>
+          <a href="monitor.html"><div class="ico">监</div>监测</a>
+          <a href="#"><div class="ico">我</div>我的</a>
+        </nav>
+      </div>
+    </div>
+
+    <aside class="flow-note">
+      <span class="tag">可视化</span>
+      <h3>地图 + 列表联动</h3>
+      <ol>
+        <li>拉取有权限单元最新坐标</li>
+        <li>车/仓图标区分，点击出详情卡</li>
+        <li>WSS 或 15–30s 轮询刷新</li>
+        <li>详情支持历史轨迹时间轴回放</li>
+      </ol>
+    </aside>
+  </div>
+  <script src="../js/app.js"></script>
+</body>
+</html>
