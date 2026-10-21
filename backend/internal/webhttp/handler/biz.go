@@ -1,0 +1,241 @@
+package handler
+
+import (
+	"net/http"
+	"strconv"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+
+	"watcher/backend/pkg/errcode"
+	"watcher/backend/pkg/response"
+	bizsvc "watcher/backend/internal/biz/service"
+	"watcher/backend/internal/webhttp/middleware"
+)
+
+type BizHandler struct {
+	biz *bizsvc.Service
+}
+
+func NewBizHandler(biz *bizsvc.Service) *BizHandler {
+	return &BizHandler{biz: biz}
+}
+
+func (h *BizHandler) CreateMaterial(c *gin.Context) {
+	var req struct {
+		Code      string `json:"code" binding:"required"`
+		Name      string `json:"name" binding:"required"`
+		WasteCode string `json:"wasteCode"`
+		Category  string `json:"category"`
+		Unit      string `json:"unit"`
+		Spec      string `json:"spec"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, http.StatusBadRequest, errcode.ValidationError, err.Error())
+		return
+	}
+	m, err := h.biz.CreateMaterial(c.Request.Context(), bizsvc.CreateMaterialInput(req))
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.OK(c, m)
+}
+
+func (h *BizHandler) ListMaterials(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := h.biz.ListMaterials(c.Request.Context(), page, size)
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.Page(c, list, page, size, total)
+}
+
+func (h *BizHandler) CreateInbound(c *gin.Context) {
+	var req struct {
+		WarehouseID string  `json:"warehouseId" binding:"required"`
+		MaterialID  uint64  `json:"materialId" binding:"required"`
+		Qty         float64 `json:"qty" binding:"required"`
+		Remark      string  `json:"remark"`
+		ManifestNo  string  `json:"manifestNo"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, http.StatusBadRequest, errcode.ValidationError, err.Error())
+		return
+	}
+	uid := mustUserID(c)
+	order, err := h.biz.CreateInboundOrder(c.Request.Context(), bizsvc.CreateInboundInput{
+		WarehouseID: req.WarehouseID,
+		MaterialID:  req.MaterialID,
+		Qty:         req.Qty,
+		Remark:      req.Remark,
+		ManifestNo:  req.ManifestNo,
+		CreatedBy:   uid,
+	})
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.OK(c, order)
+}
+
+func (h *BizHandler) ListInbound(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := h.biz.ListInboundOrders(c.Request.Context(), page, size)
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.Page(c, list, page, size, total)
+}
+
+func (h *BizHandler) IssueCodes(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	var req struct {
+		Count int `json:"count" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, http.StatusBadRequest, errcode.ValidationError, err.Error())
+		return
+	}
+	codes, err := h.biz.IssueCodes(c.Request.Context(), id, req.Count)
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.OK(c, codes)
+}
+
+func (h *BizHandler) ConfirmInbound(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	var req execReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, http.StatusBadRequest, errcode.ValidationError, err.Error())
+		return
+	}
+	if req.ClientRequestID == "" {
+		req.ClientRequestID = c.GetHeader("X-Idempotency-Key")
+	}
+	res, err := h.biz.ConfirmInbound(c.Request.Context(), bizsvc.ConfirmInboundInput{
+		OrderID: id, UniqueCode: req.UniqueCode, OperatorID: mustUserID(c),
+		ClientRequestID: req.ClientRequestID, Lat: req.Lat, Lng: req.Lng, PhotoKey: req.PhotoObjectKey,
+	})
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.OK(c, res)
+}
+
+func (h *BizHandler) CreateOutbound(c *gin.Context) {
+	var req struct {
+		WarehouseID string  `json:"warehouseId" binding:"required"`
+		MaterialID  uint64  `json:"materialId" binding:"required"`
+		Qty         float64 `json:"qty" binding:"required"`
+		Remark      string  `json:"remark"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, http.StatusBadRequest, errcode.ValidationError, err.Error())
+		return
+	}
+	order, err := h.biz.CreateOutboundOrder(c.Request.Context(), req.WarehouseID, mustUserID(c), req.MaterialID, req.Qty, req.Remark)
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.OK(c, order)
+}
+
+func (h *BizHandler) ConfirmOutbound(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	var req struct {
+		execReq
+		Action string `json:"action"` // lock | receive
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, http.StatusBadRequest, errcode.ValidationError, err.Error())
+		return
+	}
+	if req.ClientRequestID == "" {
+		req.ClientRequestID = c.GetHeader("X-Idempotency-Key")
+	}
+	action := req.Action
+	if action == "" {
+		action = c.DefaultQuery("action", "lock")
+	}
+	var (
+		res *bizsvc.ConfirmResult
+		err error
+	)
+	switch action {
+	case "receive":
+		res, err = h.biz.ReceiveOutbound(c.Request.Context(), bizsvc.ReceiveOutboundInput{
+			OrderID: id, UniqueCode: req.UniqueCode, OperatorID: mustUserID(c),
+			ClientRequestID: req.ClientRequestID, Lat: req.Lat, Lng: req.Lng, PhotoKey: req.PhotoObjectKey,
+		})
+	default:
+		res, err = h.biz.LockOutbound(c.Request.Context(), bizsvc.LockOutboundInput{
+			OrderID: id, UniqueCode: req.UniqueCode, OperatorID: mustUserID(c),
+			ClientRequestID: req.ClientRequestID, Lat: req.Lat, Lng: req.Lng, PhotoKey: req.PhotoObjectKey,
+		})
+	}
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.OK(c, res)
+}
+
+func (h *BizHandler) GetUniqueCode(c *gin.Context) {
+	code, err := h.biz.GetUniqueCode(c.Request.Context(), c.Param("code"))
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.OK(c, code)
+}
+
+func (h *BizHandler) ListStocks(c *gin.Context) {
+	list, err := h.biz.ListStocks(c.Request.Context(), c.Query("warehouseId"))
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.OK(c, list)
+}
+
+type execReq struct {
+	UniqueCode      string   `json:"uniqueCode" binding:"required"`
+	ClientRequestID string   `json:"clientRequestId"`
+	Lat             *float64 `json:"lat"`
+	Lng             *float64 `json:"lng"`
+	PhotoObjectKey  string   `json:"photoObjectKey"`
+}
+
+func mustUserID(c *gin.Context) uint64 {
+	v, _ := c.Get(middleware.CtxUserID)
+	s, _ := v.(string)
+	id, _ := strconv.ParseUint(s, 10, 64)
+	return id
+}
+
+func mapBizErr(c *gin.Context, err error) {
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, errcode.StateInvalid):
+		response.Fail(c, http.StatusConflict, errcode.StateInvalid, msg)
+	case strings.Contains(msg, errcode.ValidationError):
+		response.Fail(c, http.StatusBadRequest, errcode.ValidationError, msg)
+	case strings.Contains(msg, errcode.NotFound):
+		response.Fail(c, http.StatusNotFound, errcode.NotFound, msg)
+	case strings.Contains(msg, errcode.AuthDenied):
+		response.Fail(c, http.StatusForbidden, errcode.AuthDenied, msg)
+	case strings.Contains(msg, errcode.IdempotentReplay):
+		response.Fail(c, http.StatusOK, errcode.IdempotentReplay, msg)
+	default:
+		response.Fail(c, http.StatusInternalServerError, errcode.Internal, msg)
+	}
+}

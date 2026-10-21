@@ -1,0 +1,42 @@
+# Binaries / release packs
+bin/
+dist/
+*.zip
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go
+vendor/
+*.test
+coverage.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Env / secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Node / Flutter
+node_modules/
+frontend/**/dist/
+frontend/**/build/
+mobile/.dart_tool/
+mobile/.flutter-plugins*
+mobile/.idea/
+mobile/*.iml
+mobile/android/.gradle/
+mobile/windows/flutter/ephemeral/
+
+# Proto generated kept in contracts/gen for easier clone
+
+# Logs
+*.log
+tmp/

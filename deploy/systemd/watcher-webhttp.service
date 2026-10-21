@@ -1,0 +1,14 @@
+[Unit]
+Description=Watcher WebHTTP
+After=network.target mysql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/watcher
+ExecStart=/opt/watcher/bin/webhttp
+Restart=on-failure
+Environment=WATCHER_ENV=prod
+# 配置默认读取 /opt/watcher/backend/configs/config.yaml
+
+[Install]
+WantedBy=multi-user.target

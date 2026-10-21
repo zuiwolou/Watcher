@@ -1,32 +1,37 @@
-# 智能危废管控系统 — 设计交付包（V2.1）
+# 智能危废管控系统 — 全栈 MVP 0.2
 
-## 三端职责
+按职责划分的 monorepo。目录索引：[docs/guides/目录说明.md](docs/guides/目录说明.md)
 
-| 端 | 职责 | 布局 / 入口 |
-| --- | --- | --- |
-| **网页前台** | 仅数据展示（告警、物资、监测、定位、围栏等） | **上下结构：顶栏菜单** · [web-portal](prototypes/web-portal/index.html) |
-| **网页后台** | 人员权限 + 主数据/单据录入配置（不做打卡扫码） | 左侧管理台 · [web-admin](prototypes/web-admin/index.html) |
-| **管控 APP** | 展示 + **现场执行**（运输打卡、盘点扫码、入出库扫码） | 移动端 · [app](prototypes/app/index.html) |
+详情：[MVP说明](docs/guides/MVP说明.md) · [实施计划](docs/plan/实施计划.md) · [开发上手](docs/guides/开发上手.md)
 
-总导航：[prototypes/index.html](prototypes/index.html)
+## 快速启动
 
-## 协作关系
+```bash
+# 1) 中间件
+docker compose -f deploy/compose/docker-compose.yml up -d
 
+# 2) 后端（多终端）
+go run ./backend/cmd/webhttp    # :8080
+go run ./backend/cmd/history    # :8082
+go run ./backend/cmd/push       # :8083
+go run ./backend/cmd/mqtt       # EMQX
+
+# 3) 前端
+cd frontend/admin && npm i && npm run dev    # :5173
+cd frontend/portal && npm i && npm run dev   # :5174
+
+# 4) 冒烟
+powershell -File tools/scripts/smoke.ps1
+
+# 5) 一键打包（默认 Windows amd64）
+.\pack.ps1
 ```
-后台开单/建盘点任务/绑车辆/配阈值围栏
-        ↓
-APP 扫码打卡 · 盘点实盘 · 入出库确认
-        ↓
-前台（顶栏）实时展示告警、库存、轨迹、报表
-```
 
-## 人员权限
-
-- RBAC：人员 ↔ 角色 ↔ 权限点 + 仓库范围  
-- 原型：[人员管理](prototypes/web-admin/users.html) · [角色权限](prototypes/web-admin/roles.html)
+账号：`admin` / `Admin@123`
 
 ## 文档
 
-- [系统设计文档 V2.2](docs/智能危废管控系统设计文档.md)
-- [架构与组网示意图](docs/架构与组网示意图.md)
-- [MQTT 可自定义数据结构规范](docs/MQTT可自定义数据结构规范.md)（后台原型：[mqtt-schema](prototypes/web-admin/mqtt-schema.html)）
+- [系统设计 V5.1](docs/design/智能危废管控系统设计文档.md)
+- [需求-后端](docs/requirements/需求-后端.md) · [需求-前端](docs/requirements/需求-前端.md) · [需求-APP](docs/requirements/需求-APP.md)
+- [OpenAPI](contracts/openapi/openapi.yaml)
+- [默认 SQL](sql/README.md)（`watcher_schema.sql` · `watcher_data.sql`）

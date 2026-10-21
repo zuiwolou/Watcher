@@ -1,0 +1,13 @@
+[Unit]
+Description=Watcher History Service
+After=network.target mysql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/watcher
+ExecStart=/opt/watcher/bin/history
+Restart=on-failure
+Environment=HISTORY_HTTP_ADDR=:8082
+
+[Install]
+WantedBy=multi-user.target

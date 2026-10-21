@@ -1,0 +1,54 @@
+syntax = "proto3";
+package push.v1;
+option go_package = "watcher/contracts/gen/push/v1;pushv1";
+
+enum MsgType {
+  MSG_TYPE_UNSPECIFIED = 0;
+  TELEMETRY = 1;
+  LOCATION = 2;
+  EVENT = 3;
+  ALARM = 4;
+  HEARTBEAT = 5;
+}
+
+message Telemetry {
+  double temperature = 1;
+  double humidity = 2;
+  double water_leak = 3;
+  double intrusion = 4;
+  map<string, double> custom = 5;
+}
+
+message Location {
+  double lat = 1;
+  double lng = 2;
+  double speed = 3;
+  double heading = 4;
+  double accuracy = 5;
+  string unit_id = 6;
+}
+
+message Alarm {
+  string alarm_id = 1;
+  string rule_code = 2;
+  string level = 3;
+  string title = 4;
+  string status = 5;
+  string metric = 6;
+  double value = 7;
+  double threshold = 8;
+}
+
+message PushEnvelope {
+  uint32 ver = 1;
+  MsgType msg_type = 2;
+  string msg_id = 3;
+  int64 ts_unix_ms = 4;
+  string warehouse_id = 5;
+  string device_id = 6;
+  oneof payload {
+    Telemetry telemetry = 10;
+    Location location = 11;
+    Alarm alarm = 13;
+  }
+}

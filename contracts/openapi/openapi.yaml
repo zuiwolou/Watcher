@@ -1,0 +1,294 @@
+openapi: 3.0.3
+info:
+  title: Watcher 智能危废管控 API
+  version: 0.2.0
+  description: |
+    WebHTTP 对外 REST。阶段 A1/A2 已实现与规划接口草案。
+servers:
+  - url: http://127.0.0.1:8080/api/v1
+tags:
+  - name: auth
+  - name: iam
+  - name: materials
+  - name: inbound
+  - name: outbound
+  - name: transport
+  - name: media
+paths:
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: 登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+                mode: { type: string, enum: [local, ldap] }
+      responses:
+        "200":
+          description: OK
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: 刷新令牌
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200":
+          description: OK
+  /auth/change-password:
+    post:
+      tags: [auth]
+      summary: 修改密码（含强制改密）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [oldPassword, newPassword]
+              properties:
+                oldPassword: { type: string }
+                newPassword: { type: string }
+      responses:
+        "200":
+          description: OK
+  /me:
+    get:
+      tags: [auth]
+      summary: 当前用户
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+  /admin/users:
+    get:
+      tags: [iam]
+      summary: 用户列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: pageSize
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [iam]
+      summary: 创建用户
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+  /admin/users/{id}:
+    put:
+      tags: [iam]
+      summary: 更新用户
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+  /admin/roles:
+    get:
+      tags: [iam]
+      summary: 角色列表
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [iam]
+      summary: 创建角色
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+  /admin/roles/{id}:
+    put:
+      tags: [iam]
+      summary: 更新角色权限
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+  /admin/permissions:
+    get:
+      tags: [iam]
+      summary: 可用权限点目录
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+  /materials:
+    get:
+      tags: [materials]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [materials]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+  /stocks:
+    get:
+      tags: [materials]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+  /unique-codes/{code}:
+    get:
+      tags: [materials]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+  /inbound/orders:
+    get:
+      tags: [inbound]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [inbound]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+  /inbound/orders/{id}/issue-codes:
+    post:
+      tags: [inbound]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+  /inbound/orders/{id}/confirm:
+    post:
+      tags: [inbound]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+  /outbound/orders:
+    post:
+      tags: [outbound]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+  /outbound/orders/{id}/confirm:
+    post:
+      tags: [outbound]
+      summary: action=lock|receive
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+  /transport/units:
+    get:
+      tags: [transport]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [transport]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+  /transport/tasks:
+    get:
+      tags: [transport]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [transport]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+  /transport/checkins:
+    post:
+      tags: [transport]
+      summary: 运输打卡（不改签收库存）
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+  /media/upload-url:
+    post:
+      tags: [media]
+      summary: MinIO 预签名 PUT
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contentType]
+              properties:
+                contentType: { type: string }
+                ext: { type: string }
+      responses:
+        "200":
+          description: OK
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

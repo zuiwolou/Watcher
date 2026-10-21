@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+      - name: Tidy
+        run: go mod tidy
+      - name: Test
+        run: go test ./...
+      - name: Build all services
+        run: |
+          go build -o bin/webhttp ./backend/cmd/webhttp
+          go build -o bin/history ./backend/cmd/history
+          go build -o bin/push ./backend/cmd/push
+          go build -o bin/mqtt ./backend/cmd/mqtt
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build admin
+        working-directory: frontend/admin
+        run: npm install && npm run build
+      - name: Build portal
+        working-directory: frontend/portal
+        run: npm install && npm run build

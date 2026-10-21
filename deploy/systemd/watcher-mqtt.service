@@ -1,0 +1,12 @@
+[Unit]
+Description=Watcher MQTT Ingest Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/watcher
+ExecStart=/opt/watcher/bin/mqtt
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

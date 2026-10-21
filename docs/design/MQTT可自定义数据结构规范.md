@@ -438,7 +438,7 @@ Topic：`hw/{tenantId}/wh/{warehouseId}/dev/{deviceId}/telemetry`
 5. **在线调试**：粘贴原始报文 → 预览 Canonical → 模拟入库（测试租户）。  
 6. **原始报文抽样**：失败包与抽样成功包可查。
 
-原型页：`prototypes/web-admin/mqtt-schema.html`
+原型页：`archive/prototypes/web-admin/mqtt-schema.html`
 
 ---
 

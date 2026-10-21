@@ -1,0 +1,13 @@
+[Unit]
+Description=Watcher Push Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/watcher
+ExecStart=/opt/watcher/bin/push
+Restart=on-failure
+Environment=PUSH_HTTP_ADDR=:8083
+
+[Install]
+WantedBy=multi-user.target
