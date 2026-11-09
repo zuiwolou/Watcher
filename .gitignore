@@ -23,6 +23,10 @@ coverage.out
 .env.local
 *.pem
 *.key
+backend/configs/config.yaml
+
+# Local agent / IDE scratch
+.workbuddy/
 
 # Node / Flutter
 node_modules/
@@ -40,3 +44,6 @@ mobile/windows/flutter/ephemeral/
 # Logs
 *.log
 tmp/
+
+# Local smoke ephemeral MySQL / process files
+.smoke/

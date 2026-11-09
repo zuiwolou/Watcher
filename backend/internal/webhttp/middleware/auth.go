@@ -37,13 +37,24 @@ func RequestID() gin.HandlerFunc {
 
 func JWT(mgr *auth.Manager) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		token := ""
 		h := c.GetHeader("Authorization")
-		if h == "" || !strings.HasPrefix(h, "Bearer ") {
+		if strings.HasPrefix(h, "Bearer ") {
+			token = strings.TrimPrefix(h, "Bearer ")
+		}
+		// WSS / 部分客户端可通过 query 传 access token
+		if token == "" {
+			token = c.Query("token")
+		}
+		if token == "" {
+			token = c.Query("access_token")
+		}
+		if token == "" {
 			response.Fail(c, http.StatusUnauthorized, errcode.AuthDenied, "missing bearer token")
 			c.Abort()
 			return
 		}
-		claims, err := mgr.ParseAccess(strings.TrimPrefix(h, "Bearer "))
+		claims, err := mgr.ParseAccess(token)
 		if err != nil {
 			response.Fail(c, http.StatusUnauthorized, errcode.AuthDenied, "invalid token")
 			c.Abort()
@@ -58,7 +69,27 @@ func JWT(mgr *auth.Manager) gin.HandlerFunc {
 	}
 }
 
+func clientAllowed(claimClients []string, want string) bool {
+	for _, x := range claimClients {
+		if x == want {
+			return true
+		}
+	}
+	return false
+}
+
+// RequireClient enforces JWT claim clients contains the required client.
+// When X-Client is present it must also match and be in claims.
 func RequireClient(client string) gin.HandlerFunc {
+	return RequireAnyClient(client)
+}
+
+// RequireAnyClient allows any of the listed clients (admin|portal|app).
+func RequireAnyClient(allowed ...string) gin.HandlerFunc {
+	set := map[string]struct{}{}
+	for _, a := range allowed {
+		set[a] = struct{}{}
+	}
 	return func(c *gin.Context) {
 		v, ok := c.Get(CtxClients)
 		if !ok {
@@ -67,23 +98,28 @@ func RequireClient(client string) gin.HandlerFunc {
 			return
 		}
 		clients, _ := v.([]string)
-		for _, x := range clients {
-			if x == client {
+		hdr := strings.TrimSpace(c.GetHeader("X-Client"))
+		if hdr != "" {
+			if _, ok := set[hdr]; !ok {
+				response.Fail(c, http.StatusForbidden, errcode.AuthDenied, "X-Client not permitted on this route: "+hdr)
+				c.Abort()
+				return
+			}
+			if !clientAllowed(clients, hdr) {
+				response.Fail(c, http.StatusForbidden, errcode.AuthDenied, "X-Client not in token: "+hdr)
+				c.Abort()
+				return
+			}
+			c.Next()
+			return
+		}
+		for _, a := range allowed {
+			if clientAllowed(clients, a) {
 				c.Next()
 				return
 			}
 		}
-		// also accept header override check against claim list
-		hdr := c.GetHeader("X-Client")
-		if hdr == client {
-			for _, x := range clients {
-				if x == hdr {
-					c.Next()
-					return
-				}
-			}
-		}
-		response.Fail(c, http.StatusForbidden, errcode.AuthDenied, "client not allowed: "+client)
+		response.Fail(c, http.StatusForbidden, errcode.AuthDenied, "client not allowed")
 		c.Abort()
 	}
 }

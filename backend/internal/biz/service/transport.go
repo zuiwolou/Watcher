@@ -2,16 +2,15 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"watcher/backend/pkg/errcode"
 	"watcher/backend/internal/biz/internal/domain"
 	"watcher/backend/internal/biz/internal/model"
+	"watcher/backend/pkg/errcode"
 )
 
 func (s *Service) CreateTransportUnit(ctx context.Context, plateNo, typ, deviceID string) (*model.TransportUnit, error) {
@@ -67,12 +66,7 @@ func (s *Service) CreateTransportTask(ctx context.Context, in CreateTransportTas
 }
 
 func (s *Service) ListTransportTasks(ctx context.Context, page, pageSize int) ([]model.TransportTask, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
+	page, pageSize = normalizePage(page, pageSize)
 	var total int64
 	q := s.db.WithContext(ctx).Model(&model.TransportTask{})
 	_ = q.Count(&total)
@@ -102,14 +96,13 @@ func (s *Service) SubmitCheckin(ctx context.Context, in SubmitCheckinInput) (*mo
 		return nil, fmt.Errorf("%s: invalid nodeType", errcode.ValidationError)
 	}
 	key := hashKey("transport_checkin:" + in.ClientRequestID)
-	var existing model.IdempotencyRecord
-	if err := s.db.Where("key_hash = ?", key).First(&existing).Error; err == nil {
+	if hit, err := replayed(s.db.WithContext(ctx), key); err != nil {
+		return nil, err
+	} else if hit {
 		var ck model.TransportCheckin
-		if e2 := s.db.Where("client_request_id = ?", in.ClientRequestID).First(&ck).Error; e2 == nil {
+		if err := s.db.WithContext(ctx).Where("client_request_id = ?", in.ClientRequestID).First(&ck).Error; err == nil {
 			return &ck, nil
 		}
-	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
 	}
 
 	var result *model.TransportCheckin
@@ -153,7 +146,9 @@ func (s *Service) SubmitCheckin(ctx context.Context, in SubmitCheckinInput) (*mo
 				return err
 			}
 		}
-		_ = tx.Create(&model.IdempotencyRecord{KeyHash: key, Response: fmt.Sprintf("%d", ck.ID)}).Error
+		if err := claimIdempotency(tx, key, fmt.Sprintf("%d", ck.ID)); err != nil {
+			return err
+		}
 		result = ck
 		return nil
 	})

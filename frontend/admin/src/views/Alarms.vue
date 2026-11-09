@@ -1,8 +1,8 @@
 <template>
   <div>
     <h3>告警</h3>
-    <el-button @click="evalDemo">模拟超阈</el-button>
     <el-button @click="load">刷新</el-button>
+    <el-button type="warning" @click="goThreshold">去阈值评估</el-button>
     <el-table :data="list" border style="margin-top:12px">
       <el-table-column prop="ID" label="ID" width="80" />
       <el-table-column prop="Title" label="标题" />
@@ -18,14 +18,12 @@
 </template>
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import http from '../api'
+const router = useRouter()
 const list = ref([])
 async function load() { list.value = (await http.get('/alarms')).list || [] }
-async function evalDemo() {
-  await http.put('/thresholds/WH01', { metric: 'temperature', upper: 30, lower: 0 })
-  await http.post('/monitor/evaluate', { warehouseId: 'WH01', deviceId: 'DEV01', metrics: { temperature: 45 } })
-  load()
-}
 async function ack(id) { await http.post(`/alarms/${id}/ack`); load() }
+function goThreshold() { router.push('/thresholds') }
 onMounted(load)
 </script>

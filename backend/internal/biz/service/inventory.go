@@ -24,12 +24,7 @@ func (s *Service) CreateInventoryTask(ctx context.Context, name, warehouseID, sc
 }
 
 func (s *Service) ListInventoryTasks(ctx context.Context, page, pageSize int) ([]model.InventoryTask, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
+	page, pageSize = normalizePage(page, pageSize)
 	var total int64
 	q := s.db.WithContext(ctx).Model(&model.InventoryTask{})
 	_ = q.Count(&total)
@@ -43,11 +38,13 @@ func (s *Service) ScanInventory(ctx context.Context, taskID uint64, uniqueCode s
 		return nil, fmt.Errorf("%s: clientRequestId required", errcode.ValidationError)
 	}
 	key := hashKey("inv_scan:" + clientReqID)
-	var existing model.IdempotencyRecord
-	if err := s.db.Where("key_hash = ?", key).First(&existing).Error; err == nil {
+	if hit, err := replayed(s.db.WithContext(ctx), key); err != nil {
+		return nil, err
+	} else if hit {
 		var line model.InventoryLine
-		_ = s.db.Where("task_id = ? AND unique_code = ?", taskID, uniqueCode).First(&line)
-		return &line, nil
+		if err := s.db.WithContext(ctx).Where("task_id = ? AND unique_code = ?", taskID, uniqueCode).First(&line).Error; err == nil {
+			return &line, nil
+		}
 	}
 
 	var line *model.InventoryLine
@@ -85,9 +82,10 @@ func (s *Service) ScanInventory(ctx context.Context, taskID uint64, uniqueCode s
 			line = &l
 		}
 		task.Status = model.InvScanning
-		_ = tx.Save(&task)
-		_ = tx.Create(&model.IdempotencyRecord{KeyHash: key, Response: uniqueCode})
-		return nil
+		if err := tx.Save(&task).Error; err != nil {
+			return err
+		}
+		return claimIdempotency(tx, key, uniqueCode)
 	})
 	return line, err
 }

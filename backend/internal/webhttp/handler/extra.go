@@ -9,11 +9,12 @@ import (
 
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 
-	"watcher/backend/pkg/errcode"
-	"watcher/backend/pkg/response"
 	bizsvc "watcher/backend/internal/biz/service"
 	"watcher/backend/internal/webhttp/middleware"
+	"watcher/backend/pkg/errcode"
+	"watcher/backend/pkg/response"
 )
 
 // --- inventory ---
@@ -101,10 +102,11 @@ func (h *BizHandler) ListInventoryLines(c *gin.Context) {
 type ApprovalHandler struct {
 	biz *bizsvc.Service
 	e   *casbin.Enforcer
+	db  *gorm.DB
 }
 
-func NewApprovalHandler(biz *bizsvc.Service, e *casbin.Enforcer) *ApprovalHandler {
-	return &ApprovalHandler{biz: biz, e: e}
+func NewApprovalHandler(biz *bizsvc.Service, e *casbin.Enforcer, db *gorm.DB) *ApprovalHandler {
+	return &ApprovalHandler{biz: biz, e: e, db: db}
 }
 
 func (h *ApprovalHandler) UpsertTemplate(c *gin.Context) {
@@ -169,10 +171,37 @@ func (h *ApprovalHandler) ListAdjustments(c *gin.Context) {
 	response.Page(c, list, page, size, total)
 }
 
+func (h *ApprovalHandler) ListOrders(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := h.biz.ListApprovalOrders(c.Request.Context(), page, size, c.Query("status"), c.Query("bizType"))
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.Page(c, list, page, size, total)
+}
+
+func (h *ApprovalHandler) GetOrder(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	detail, err := h.biz.GetApprovalOrder(c.Request.Context(), id)
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.OK(c, detail)
+}
+
 func (h *ApprovalHandler) ListTodo(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	size, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
-	list, total, err := h.biz.ListApprovalTodo(c.Request.Context(), page, size)
+	uid := mustUserID(c)
+	uidStr := fmt.Sprintf("%d", uid)
+	hasRole := func(code string) bool {
+		ok, _ := h.e.HasGroupingPolicy("user:"+uidStr, "role:"+code)
+		return ok
+	}
+	list, total, err := h.biz.ListApprovalTodo(c.Request.Context(), page, size, uid, hasRole)
 	if err != nil {
 		mapBizErr(c, err)
 		return
@@ -203,6 +232,7 @@ func (h *ApprovalHandler) Act(c *gin.Context) {
 		mapBizErr(c, err)
 		return
 	}
+	writeAudit(c, h.db, "approval."+req.Action, "approval_order", strconv.FormatUint(id, 10), gin.H{"comment": req.Comment})
 	response.OK(c, o)
 }
 
@@ -418,6 +448,7 @@ func (h *BizHandler) AckAlarm(c *gin.Context) {
 		mapBizErr(c, err)
 		return
 	}
+	writeAudit(c, h.db, "alarm.ack", "alarm", strconv.FormatUint(id, 10), nil)
 	response.OK(c, gin.H{"ok": true})
 }
 
@@ -427,6 +458,7 @@ func (h *BizHandler) CloseAlarm(c *gin.Context) {
 		mapBizErr(c, err)
 		return
 	}
+	writeAudit(c, h.db, "alarm.close", "alarm", strconv.FormatUint(id, 10), nil)
 	response.OK(c, gin.H{"ok": true})
 }
 

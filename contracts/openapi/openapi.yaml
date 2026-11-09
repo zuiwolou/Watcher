@@ -1,21 +1,91 @@
 openapi: 3.0.3
 info:
   title: Watcher 智能危废管控 API
-  version: 0.2.0
+  version: 0.3.0
   description: |
-    WebHTTP 对外 REST。阶段 A1/A2 已实现与规划接口草案。
+    WebHTTP 对外 REST（MVP 0.3 与代码对齐）。
+
+    **约定**
+    - 统一响应：`{ code, message?, data?, requestId? }`；分页在 `data.{ list, page, pageSize, total }`
+    - 鉴权：`Authorization: Bearer <accessToken>`
+    - 端标识：`X-Client: admin | portal | app`（业务路由需三者之一；IAM/设备/Schema/对接仅 `admin`）
+    - 幂等：执行类 body `clientRequestId` 或头 `X-Idempotency-Key`
+    - 本文件以 `backend/cmd/webhttp/main.go` 注册表为准
+
+    **已知未实现（见 docs/plan/缺口评估与迭代计划.md）**
+    - 监管入站 `/api/v1/open/*`
+    - 唯一码作废、物资 PUT、logout、导出
+    - 盘点过账差异调账（路由已有，语义为 MVP 骨架）
 servers:
-  - url: http://127.0.0.1:8080/api/v1
+  - url: http://127.0.0.1:8080
+    description: 本地 webhttp
 tags:
+  - name: system
   - name: auth
   - name: iam
+  - name: media
   - name: materials
   - name: inbound
   - name: outbound
   - name: transport
-  - name: media
+  - name: inventory
+  - name: approval
+  - name: inspection
+  - name: alarm
+  - name: monitor
+  - name: mqtt
+  - name: openapi
+  - name: device
+  - name: realtime
+
 paths:
-  /auth/login:
+  /healthz:
+    get:
+      tags: [system]
+      summary: 健康检查
+      responses:
+        "200":
+          description: OK
+
+  /internal/monitor/evaluate:
+    post:
+      tags: [system]
+      summary: 内部遥测阈值评估（需 X-Internal-Token）
+      parameters:
+        - $ref: "#/components/parameters/InternalToken"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                warehouseId: { type: string }
+                deviceId: { type: string }
+                metric: { type: string }
+                value: { type: number }
+      responses:
+        "200":
+          description: OK
+
+  /v1/stream:
+    get:
+      tags: [realtime]
+      summary: WebSocket 反代至 push（Protobuf 下行）
+      description: |
+        升级为 WebSocket。JWT 可通过 `Authorization` 或 query `token` / `access_token`。
+        需 `X-Client`（握手前 HTTP 头）为 admin|portal|app。
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClient"
+        - in: query
+          name: token
+          schema: { type: string }
+          description: 可选，浏览器无法带头时用
+      responses:
+        "101":
+          description: Switching Protocols
+
+  /api/v1/auth/login:
     post:
       tags: [auth]
       summary: 登录
@@ -29,11 +99,12 @@ paths:
               properties:
                 username: { type: string }
                 password: { type: string }
-                mode: { type: string, enum: [local, ldap] }
+                mode: { type: string, enum: [local, ldap], default: local }
       responses:
         "200":
-          description: OK
-  /auth/refresh:
+          description: OK（含 accessToken / refreshToken / mustChangePassword / clients）
+
+  /api/v1/auth/refresh:
     post:
       tags: [auth]
       summary: 刷新令牌
@@ -49,11 +120,14 @@ paths:
       responses:
         "200":
           description: OK
-  /auth/change-password:
+
+  /api/v1/auth/change-password:
     post:
       tags: [auth]
       summary: 修改密码（含强制改密）
       security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClient"
       requestBody:
         required: true
         content:
@@ -67,26 +141,49 @@ paths:
       responses:
         "200":
           description: OK
-  /me:
+
+  /api/v1/me:
     get:
       tags: [auth]
-      summary: 当前用户
+      summary: 当前用户与权限摘要
       security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClient"
       responses:
         "200":
           description: OK
-  /admin/users:
+
+  /api/v1/me/permissions:
+    get:
+      tags: [auth]
+      summary: 当前用户权限（与 /me 同 handler）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClient"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/admin/permissions:
+    get:
+      tags: [iam]
+      summary: 可用权限点目录
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAdmin"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/admin/users:
     get:
       tags: [iam]
       summary: 用户列表
       security: [{ bearerAuth: [] }]
       parameters:
-        - in: query
-          name: page
-          schema: { type: integer }
-        - in: query
-          name: pageSize
-          schema: { type: integer }
+        - $ref: "#/components/parameters/XClientAdmin"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
       responses:
         "200":
           description: OK
@@ -94,27 +191,31 @@ paths:
       tags: [iam]
       summary: 创建用户
       security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAdmin"
       responses:
         "200":
           description: OK
-  /admin/users/{id}:
+
+  /api/v1/admin/users/{id}:
     put:
       tags: [iam]
-      summary: 更新用户
+      summary: 更新用户（启停/角色/重置密码等）
       security: [{ bearerAuth: [] }]
       parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/XClientAdmin"
+        - $ref: "#/components/parameters/PathID"
       responses:
         "200":
           description: OK
-  /admin/roles:
+
+  /api/v1/admin/roles:
     get:
       tags: [iam]
       summary: 角色列表
       security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAdmin"
       responses:
         "200":
           description: OK
@@ -122,158 +223,170 @@ paths:
       tags: [iam]
       summary: 创建角色
       security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAdmin"
       responses:
         "200":
           description: OK
-  /admin/roles/{id}:
+
+  /api/v1/admin/roles/{id}:
     put:
       tags: [iam]
       summary: 更新角色权限
       security: [{ bearerAuth: [] }]
       parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/XClientAdmin"
+        - $ref: "#/components/parameters/PathID"
       responses:
         "200":
           description: OK
-  /admin/permissions:
+
+  /api/v1/admin/audit:
     get:
       tags: [iam]
-      summary: 可用权限点目录
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: OK
-  /materials:
-    get:
-      tags: [materials]
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: OK
-    post:
-      tags: [materials]
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: OK
-  /stocks:
-    get:
-      tags: [materials]
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: OK
-  /unique-codes/{code}:
-    get:
-      tags: [materials]
+      summary: 审计日志
       security: [{ bearerAuth: [] }]
       parameters:
-        - in: path
-          name: code
-          required: true
+        - $ref: "#/components/parameters/XClientAdmin"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/mqtt/schemas:
+    get:
+      tags: [mqtt]
+      summary: MQTT Schema 列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAdmin"
+      responses:
+        "200":
+          description: OK
+    put:
+      tags: [mqtt]
+      summary: 保存 MQTT Schema Profile
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAdmin"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/mqtt/schemas/dry-run:
+    post:
+      tags: [mqtt]
+      summary: Schema dry-run（调试样例载荷）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAdmin"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/integrations:
+    get:
+      tags: [openapi]
+      summary: 监管对接配置
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAdmin"
+      responses:
+        "200":
+          description: OK
+    put:
+      tags: [openapi]
+      summary: 保存对接配置
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAdmin"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/openapi/outbox:
+    get:
+      tags: [openapi]
+      summary: Outbox 投递队列
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAdmin"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: channel
           schema: { type: string }
       responses:
         "200":
           description: OK
-  /inbound/orders:
-    get:
-      tags: [inbound]
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: OK
+
+  /api/v1/openapi/outbox/{id}/retry:
     post:
-      tags: [inbound]
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: OK
-  /inbound/orders/{id}/issue-codes:
-    post:
-      tags: [inbound]
+      tags: [openapi]
+      summary: 重试 Outbox
       security: [{ bearerAuth: [] }]
       parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/XClientAdmin"
+        - $ref: "#/components/parameters/PathID"
       responses:
         "200":
           description: OK
-  /inbound/orders/{id}/confirm:
-    post:
-      tags: [inbound]
+
+  /api/v1/devices:
+    get:
+      tags: [device]
+      summary: 设备列表
       security: [{ bearerAuth: [] }]
       parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/XClientAdmin"
       responses:
         "200":
           description: OK
-  /outbound/orders:
     post:
-      tags: [outbound]
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: OK
-  /outbound/orders/{id}/confirm:
-    post:
-      tags: [outbound]
-      summary: action=lock|receive
+      tags: [device]
+      summary: 创建设备
       security: [{ bearerAuth: [] }]
       parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/XClientAdmin"
       responses:
         "200":
           description: OK
-  /transport/units:
-    get:
-      tags: [transport]
+
+  /api/v1/devices/{id}:
+    put:
+      tags: [device]
+      summary: 更新设备
       security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAdmin"
+        - $ref: "#/components/parameters/PathID"
       responses:
         "200":
           description: OK
-    post:
-      tags: [transport]
+
+  /api/v1/devices/{id}/mqtt-binding:
+    put:
+      tags: [device]
+      summary: 绑定 MQTT Schema
       security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAdmin"
+        - $ref: "#/components/parameters/PathID"
       responses:
         "200":
           description: OK
-  /transport/tasks:
-    get:
-      tags: [transport]
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: OK
-    post:
-      tags: [transport]
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: OK
-  /transport/checkins:
-    post:
-      tags: [transport]
-      summary: 运输打卡（不改签收库存）
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: OK
-  /media/upload-url:
+
+  /api/v1/media/upload-url:
     post:
       tags: [media]
-      summary: MinIO 预签名 PUT
+      summary: MinIO 预签名 PUT URL
       security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
       requestBody:
         content:
           application/json:
@@ -285,10 +398,741 @@ paths:
                 ext: { type: string }
       responses:
         "200":
+          description: OK（uploadUrl / objectKey）
+
+  /api/v1/warehouses:
+    get:
+      tags: [materials]
+      summary: 仓库列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
           description: OK
+
+  /api/v1/materials:
+    get:
+      tags: [materials]
+      summary: 物资列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [materials]
+      summary: 创建物资
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/stocks:
+    get:
+      tags: [materials]
+      summary: 库存余额
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/unique-codes/{code}:
+    get:
+      tags: [materials]
+      summary: 唯一码详情
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - in: path
+          name: code
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/inbound/orders:
+    get:
+      tags: [inbound]
+      summary: 入库单列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [inbound]
+      summary: 创建入库单
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/inbound/orders/{id}/issue-codes:
+    post:
+      tags: [inbound]
+      summary: 发码
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/inbound/orders/{id}/confirm:
+    post:
+      tags: [inbound]
+      summary: 入库确认（扫码上架）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecConfirmBody"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/outbound/orders:
+    get:
+      tags: [outbound]
+      summary: 出库单列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [outbound]
+      summary: 创建出库单
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/outbound/orders/{id}/confirm:
+    post:
+      tags: [outbound]
+      summary: 出库确认（action=lock|receive）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, uniqueCode]
+              properties:
+                action: { type: string, enum: [lock, receive] }
+                uniqueCode: { type: string }
+                clientRequestId: { type: string }
+                lat: { type: number }
+                lng: { type: number }
+                photoObjectKey: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/transport/units:
+    get:
+      tags: [transport]
+      summary: 运输单元列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [transport]
+      summary: 创建运输单元
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/transport/tasks:
+    get:
+      tags: [transport]
+      summary: 运输任务列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [transport]
+      summary: 创建运输任务
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/transport/tasks/{id}/checkins:
+    get:
+      tags: [transport]
+      summary: 任务打卡记录
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/transport/checkins:
+    post:
+      tags: [transport]
+      summary: 运输打卡（不改签收库存）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckinBody"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/inventory/tasks:
+    get:
+      tags: [inventory]
+      summary: 盘点任务列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [inventory]
+      summary: 创建盘点任务
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/inventory/tasks/{id}/scan:
+    post:
+      tags: [inventory]
+      summary: 盘点扫码
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [uniqueCode]
+              properties:
+                uniqueCode: { type: string }
+                clientRequestId: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/inventory/tasks/{id}/submit:
+    post:
+      tags: [inventory]
+      summary: 提交盘点（scanning → submitted）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/inventory/tasks/{id}/post:
+    post:
+      tags: [inventory]
+      summary: 盘点过账（MVP 仅改状态；差异调账见缺口计划 BE-01）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/inventory/tasks/{id}/lines:
+    get:
+      tags: [inventory]
+      summary: 盘点明细行
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/approvals/templates:
+    get:
+      tags: [approval]
+      summary: 审批模板列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+    put:
+      tags: [approval]
+      summary: 创建/更新审批模板
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/approvals/todo:
+    get:
+      tags: [approval]
+      summary: 我的审批待办
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/approvals/orders:
+    get:
+      tags: [approval]
+      summary: 审批单列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/approvals/orders/{id}:
+    get:
+      tags: [approval]
+      summary: 审批单详情
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/approvals/{id}/act:
+    post:
+      tags: [approval]
+      summary: 审批通过/驳回
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [approve, reject] }
+                comment: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/stocks/adjustments:
+    get:
+      tags: [approval]
+      summary: 库存调整单列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [approval]
+      summary: 发起库存调整（走审批）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/inspection/plans:
+    get:
+      tags: [inspection]
+      summary: 巡检计划列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [inspection]
+      summary: 创建巡检计划
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/inspection/routes:
+    post:
+      tags: [inspection]
+      summary: 创建巡检路线
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/inspection/points:
+    post:
+      tags: [inspection]
+      summary: 添加巡检点
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/inspection/routes/{id}/points:
+    get:
+      tags: [inspection]
+      summary: 路线点列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/inspection/tasks:
+    get:
+      tags: [inspection]
+      summary: 巡检任务列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [inspection]
+      summary: 创建巡检任务
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/inspection/tasks/{id}/checkin:
+    post:
+      tags: [inspection]
+      summary: 巡检打卡
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InspCheckinBody"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/alarms:
+    get:
+      tags: [alarm]
+      summary: 告警列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - in: query
+          name: status
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/alarms/{id}/ack:
+    post:
+      tags: [alarm]
+      summary: 确认告警
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/alarms/{id}/close:
+    post:
+      tags: [alarm]
+      summary: 关闭告警
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/thresholds:
+    get:
+      tags: [alarm]
+      summary: 阈值列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/thresholds/{warehouseId}:
+    put:
+      tags: [alarm]
+      summary: 更新仓阈值
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - in: path
+          name: warehouseId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/monitor/evaluate:
+    post:
+      tags: [alarm]
+      summary: 手动触发遥测阈值评估
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/geofences:
+    get:
+      tags: [alarm]
+      summary: 围栏列表
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+    put:
+      tags: [alarm]
+      summary: 创建/更新围栏（circle|polygon）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/geofences/evaluate:
+    post:
+      tags: [alarm]
+      summary: 按坐标评估围栏
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [warehouseId, lat, lng]
+              properties:
+                warehouseId: { type: string }
+                deviceId: { type: string }
+                lat: { type: number }
+                lng: { type: number }
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/history/telemetry:
+    get:
+      tags: [monitor]
+      summary: 遥测历史（反代 history 服务）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/history/tracks:
+    get:
+      tags: [monitor]
+      summary: 轨迹历史（反代 history 服务）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: OK
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  parameters:
+    XClient:
+      name: X-Client
+      in: header
+      schema: { type: string, enum: [admin, portal, app] }
+    XClientAdmin:
+      name: X-Client
+      in: header
+      required: true
+      schema: { type: string, enum: [admin] }
+    XClientAny:
+      name: X-Client
+      in: header
+      required: true
+      schema: { type: string, enum: [admin, portal, app] }
+    InternalToken:
+      name: X-Internal-Token
+      in: header
+      required: true
+      schema: { type: string }
+    IdempotencyKey:
+      name: X-Idempotency-Key
+      in: header
+      schema: { type: string }
+    PathID:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+  schemas:
+    ApiEnvelope:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        data: {}
+        requestId: { type: string }
+    PageData:
+      type: object
+      properties:
+        list: { type: array, items: {} }
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer, format: int64 }
+    ExecConfirmBody:
+      type: object
+      required: [uniqueCode]
+      properties:
+        uniqueCode: { type: string }
+        clientRequestId: { type: string }
+        lat: { type: number }
+        lng: { type: number }
+        photoObjectKey: { type: string }
+    CheckinBody:
+      type: object
+      required: [taskId, nodeType]
+      properties:
+        taskId: { type: integer, format: int64 }
+        nodeType: { type: string, enum: [depart, waypoint, arrive] }
+        uniqueCode: { type: string }
+        clientRequestId: { type: string }
+        lat: { type: number }
+        lng: { type: number }
+        photoObjectKey: { type: string }
+        remark: { type: string }
+    InspCheckinBody:
+      type: object
+      required: [pointId]
+      properties:
+        pointId: { type: integer, format: int64 }
+        status: { type: string, enum: [done, abnormal] }
+        remark: { type: string }
+        clientRequestId: { type: string }
+        lat: { type: number }
+        lng: { type: number }
+        photoObjectKey: { type: string }

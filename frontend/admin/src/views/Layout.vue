@@ -5,13 +5,22 @@
       <el-menu router :default-active="$route.path" background-color="#102a43" text-color="#d9e2ec" active-text-color="#2bb0ed">
         <el-menu-item index="/">概览</el-menu-item>
         <el-menu-item v-if="has('user:view')" index="/users">人员</el-menu-item>
+        <el-menu-item v-if="has('role:view')" index="/roles">角色矩阵</el-menu-item>
+        <el-menu-item v-if="has('audit:view')" index="/audit">审计</el-menu-item>
         <el-menu-item v-if="has('material:view')" index="/materials">物资</el-menu-item>
+        <el-menu-item v-if="has('material:view')" index="/stocks">库存</el-menu-item>
         <el-menu-item v-if="has('inbound:edit')" index="/inbound">入库</el-menu-item>
+        <el-menu-item v-if="has('outbound:edit')" index="/outbound">出库</el-menu-item>
         <el-menu-item v-if="has('approval:view')" index="/approvals">审批</el-menu-item>
         <el-menu-item v-if="has('transport:view')" index="/transport">运输</el-menu-item>
         <el-menu-item v-if="has('inventory:view')" index="/inventory">盘点</el-menu-item>
         <el-menu-item v-if="has('inspection:view')" index="/inspection">巡检</el-menu-item>
         <el-menu-item v-if="has('alarm:view')" index="/alarms">告警</el-menu-item>
+        <el-menu-item v-if="has('threshold:edit')" index="/thresholds">阈值</el-menu-item>
+        <el-menu-item v-if="has('geofence:view')" index="/geofences">地图围栏</el-menu-item>
+        <el-menu-item v-if="has('monitor:view')" index="/history">历史</el-menu-item>
+        <el-menu-item v-if="has('mqtt:schema:edit')" index="/mqtt-schema">MQTT Schema</el-menu-item>
+        <el-menu-item v-if="has('openapi:config')" index="/integrations">监管对接</el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>

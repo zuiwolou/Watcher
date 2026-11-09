@@ -18,3 +18,4 @@ minio:
   bucket: watcher
   use_ssl: false
   public_url: "http://127.0.0.1:9000"
+# 环境变量：WATCHER_INTERNAL_TOKEN（mqtt→评估）、WATCHER_WS_ORIGINS（WSS Origin 白名单）

@@ -213,3 +213,84 @@ const (
 	AlarmAcked  = "acked"
 	AlarmClosed = "closed"
 )
+
+// MQTT Schema Profile（设备上报结构配置）
+type MqttSchemaProfile struct {
+	ID          uint64 `gorm:"primaryKey"`
+	Code        string `gorm:"size:64;uniqueIndex"`
+	Name        string `gorm:"size:128"`
+	TopicPattern string `gorm:"size:255"`
+	MappingJSON string `gorm:"type:text"` // field mapping / dry-run sample
+	Enabled     bool   `gorm:"default:true"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+func (MqttSchemaProfile) TableName() string { return "mqtt_schema_profiles" }
+
+// OpenAPI / 监管对接配置骨架
+type IntegrationConfig struct {
+	ID        uint64 `gorm:"primaryKey"`
+	Code      string `gorm:"size:64;uniqueIndex"` // openapi | sftp
+	Name      string `gorm:"size:128"`
+	ConfigJSON string `gorm:"type:text"`
+	Enabled   bool   `gorm:"default:false"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (IntegrationConfig) TableName() string { return "integration_configs" }
+
+// --- devices ---
+
+const (
+	DeviceActive   = "active"
+	DeviceDisabled = "disabled"
+)
+
+// Device 物联/车载设备台账，可绑定 MQTT Schema Profile。
+type Device struct {
+	ID              uint64 `gorm:"primaryKey"`
+	DeviceCode      string `gorm:"size:64;uniqueIndex"`
+	Name            string `gorm:"size:128"`
+	Type            string `gorm:"size:32"` // warehouse|vehicle|handheld
+	WarehouseID     string `gorm:"size:64;index"`
+	SchemaProfileID *uint64
+	AuthType        string `gorm:"size:32;default:password"` // password|cert
+	Status          string `gorm:"size:16;index;default:active"`
+	MetaJSON        string `gorm:"type:text"`
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
+func (Device) TableName() string { return "devices" }
+
+// --- regulatory outbox ---
+
+const (
+	OutboxPending    = "pending"
+	OutboxDelivering = "delivering"
+	OutboxSuccess    = "success"
+	OutboxFailed     = "failed"
+	OutboxDead       = "dead"
+)
+
+// IntegrationOutbox 监管/OpenAPI/SFTP 出站投递队列（业务同事务入队，Worker 真投递）。
+type IntegrationOutbox struct {
+	ID           uint64 `gorm:"primaryKey"`
+	Channel      string `gorm:"size:32;index"` // openapi|sftp
+	EventType    string `gorm:"size:64;index"`
+	BizType      string `gorm:"size:64;index"`
+	BizID        string `gorm:"size:64;index"`
+	PayloadJSON  string `gorm:"type:mediumtext"`
+	Status       string `gorm:"size:16;index"`
+	Attempts     int    `gorm:"default:0"`
+	MaxAttempts  int    `gorm:"default:8"`
+	NextRetryAt  *time.Time
+	LastError    string `gorm:"size:512"`
+	DeliveredAt  *time.Time
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+func (IntegrationOutbox) TableName() string { return "integration_outbox" }

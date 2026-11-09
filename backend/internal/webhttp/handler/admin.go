@@ -131,6 +131,7 @@ func (h *AdminHandler) CreateUser(c *gin.Context) {
 		response.Fail(c, http.StatusBadRequest, errcode.ValidationError, err.Error())
 		return
 	}
+	writeAudit(c, h.db, "user.create", "user", fmt.Sprintf("%d", u.ID), gin.H{"username": u.Username})
 	response.OK(c, gin.H{"id": fmt.Sprintf("%d", u.ID)})
 }
 
@@ -185,6 +186,7 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 	if u.Status == 0 {
 		_ = h.db.Model(&iam.RefreshToken{}).Where("user_id = ?", u.ID).Update("revoked", true)
 	}
+	writeAudit(c, h.db, "user.update", "user", fmt.Sprintf("%d", u.ID), gin.H{"status": u.Status, "roleCodes": req.RoleCodes, "clients": req.Clients})
 	response.OK(c, gin.H{"id": fmt.Sprintf("%d", u.ID)})
 }
 
@@ -276,6 +278,7 @@ func (h *AdminHandler) CreateRole(c *gin.Context) {
 		response.Fail(c, http.StatusInternalServerError, errcode.Internal, err.Error())
 		return
 	}
+	writeAudit(c, h.db, "role.create", "role", fmt.Sprintf("%d", role.ID), gin.H{"code": role.Code, "permissions": req.Permissions})
 	response.OK(c, role)
 }
 
@@ -307,6 +310,7 @@ func (h *AdminHandler) UpdateRole(c *gin.Context) {
 			return
 		}
 	}
+	writeAudit(c, h.db, "role.update", "role", fmt.Sprintf("%d", role.ID), gin.H{"code": role.Code, "permissions": req.Permissions})
 	response.OK(c, role)
 }
 

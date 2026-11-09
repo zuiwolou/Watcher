@@ -10,6 +10,14 @@ import (
 
 const TopicCanonical = "iot.canonical.v1"
 const TopicAlarm = "alarm.raised"
+const TopicConfigMQTT = "config.mqtt.updated"
+const TopicBizEvent = "biz.event.v1"
+
+// NoopPublisher is used when NSQ is unavailable.
+type NoopPublisher struct{}
+
+func (NoopPublisher) Publish(topic string, producer string, payload any) error { return nil }
+func (NoopPublisher) Stop()                                                   {}
 
 type Envelope struct {
 	MsgID      string          `json:"msgId"`

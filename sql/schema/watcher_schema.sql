@@ -554,4 +554,71 @@ CREATE TABLE IF NOT EXISTS `hist_alarm_snapshots` (
   KEY `idx_hist_alarm_snapshots_alarm_id` (`alarm_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+
+-- ========== 扩展：MQTT Schema / 监管配置 ==========
+CREATE TABLE IF NOT EXISTS `mqtt_schema_profiles` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `code` VARCHAR(64) NOT NULL DEFAULT '',
+  `name` VARCHAR(128) NOT NULL DEFAULT '',
+  `topic_pattern` VARCHAR(255) NOT NULL DEFAULT '',
+  `mapping_json` TEXT NULL,
+  `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NULL,
+  `updated_at` DATETIME(3) NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_mqtt_schema_profiles_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `integration_configs` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `code` VARCHAR(64) NOT NULL DEFAULT '',
+  `name` VARCHAR(128) NOT NULL DEFAULT '',
+  `config_json` TEXT NULL,
+  `enabled` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` DATETIME(3) NULL,
+  `updated_at` DATETIME(3) NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_integration_configs_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `devices` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `device_code` VARCHAR(64) NOT NULL DEFAULT '',
+  `name` VARCHAR(128) NOT NULL DEFAULT '',
+  `type` VARCHAR(32) NOT NULL DEFAULT '',
+  `warehouse_id` VARCHAR(64) NOT NULL DEFAULT '',
+  `schema_profile_id` BIGINT UNSIGNED NULL,
+  `auth_type` VARCHAR(32) NOT NULL DEFAULT 'password',
+  `status` VARCHAR(16) NOT NULL DEFAULT 'active',
+  `meta_json` TEXT NULL,
+  `created_at` DATETIME(3) NULL,
+  `updated_at` DATETIME(3) NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_devices_device_code` (`device_code`),
+  KEY `idx_devices_warehouse_id` (`warehouse_id`),
+  KEY `idx_devices_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `integration_outbox` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `channel` VARCHAR(32) NOT NULL DEFAULT '',
+  `event_type` VARCHAR(64) NOT NULL DEFAULT '',
+  `biz_type` VARCHAR(64) NOT NULL DEFAULT '',
+  `biz_id` VARCHAR(64) NOT NULL DEFAULT '',
+  `payload_json` MEDIUMTEXT NULL,
+  `status` VARCHAR(16) NOT NULL DEFAULT 'pending',
+  `attempts` INT NOT NULL DEFAULT 0,
+  `max_attempts` INT NOT NULL DEFAULT 8,
+  `next_retry_at` DATETIME(3) NULL,
+  `last_error` VARCHAR(512) NOT NULL DEFAULT '',
+  `delivered_at` DATETIME(3) NULL,
+  `created_at` DATETIME(3) NULL,
+  `updated_at` DATETIME(3) NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_integration_outbox_channel` (`channel`),
+  KEY `idx_integration_outbox_event_type` (`event_type`),
+  KEY `idx_integration_outbox_biz_type` (`biz_type`),
+  KEY `idx_integration_outbox_biz_id` (`biz_id`),
+  KEY `idx_integration_outbox_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 SET FOREIGN_KEY_CHECKS = 1;

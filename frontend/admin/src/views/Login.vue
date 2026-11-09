@@ -3,8 +3,8 @@
     <el-card class="card">
       <h2>智能危废管控 · 后台</h2>
       <el-form @submit.prevent="onLogin">
-        <el-form-item label="账号"><el-input v-model="form.username" /></el-form-item>
-        <el-form-item label="密码"><el-input v-model="form.password" type="password" show-password /></el-form-item>
+        <el-form-item label="账号"><el-input v-model="form.username" autocomplete="username" /></el-form-item>
+        <el-form-item label="密码"><el-input v-model="form.password" type="password" show-password autocomplete="current-password" /></el-form-item>
         <el-button type="primary" native-type="submit" :loading="loading" style="width:100%">登录</el-button>
       </el-form>
     </el-card>
@@ -19,7 +19,7 @@ import { saveSession } from '../auth'
 
 const router = useRouter()
 const loading = ref(false)
-const form = reactive({ username: 'admin', password: 'Admin@123' })
+const form = reactive({ username: '', password: '' })
 
 async function onLogin() {
   loading.value = true

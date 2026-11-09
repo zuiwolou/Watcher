@@ -52,12 +52,7 @@ func (s *Service) CreateInspectionTask(ctx context.Context, planID, routeID, ass
 }
 
 func (s *Service) ListInspectionTasks(ctx context.Context, page, pageSize int) ([]model.InspectionTask, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
+	page, pageSize = normalizePage(page, pageSize)
 	var total int64
 	q := s.db.WithContext(ctx).Model(&model.InspectionTask{})
 	_ = q.Count(&total)
@@ -85,11 +80,13 @@ func (s *Service) InspectionCheckin(ctx context.Context, in InspectionCheckinInp
 		return nil, nil, fmt.Errorf("%s: status", errcode.ValidationError)
 	}
 	key := hashKey("insp_checkin:" + in.ClientRequestID)
-	var existing model.IdempotencyRecord
-	if err := s.db.Where("key_hash = ?", key).First(&existing).Error; err == nil {
+	if hit, err := replayed(s.db.WithContext(ctx), key); err != nil {
+		return nil, nil, err
+	} else if hit {
 		var ck model.InspectionCheckin
-		_ = s.db.Where("client_request_id = ?", in.ClientRequestID).First(&ck)
-		return &ck, nil, nil
+		if err := s.db.WithContext(ctx).Where("client_request_id = ?", in.ClientRequestID).First(&ck).Error; err == nil {
+			return &ck, nil, nil
+		}
 	}
 
 	var (
@@ -127,7 +124,9 @@ func (s *Service) InspectionCheckin(ctx context.Context, in InspectionCheckinInp
 		}
 		if task.Status == model.InspOpen {
 			task.Status = model.InspInProgress
-			_ = tx.Save(&task)
+			if err := tx.Save(&task).Error; err != nil {
+				return err
+			}
 		}
 		if in.Status == model.PointAbnormal {
 			a := &model.Alarm{
@@ -145,9 +144,13 @@ func (s *Service) InspectionCheckin(ctx context.Context, in InspectionCheckinInp
 		tx.Model(&model.InspectionCheckin{}).Where("task_id = ?", task.ID).Distinct("point_id").Count(&ckCnt)
 		if pointCnt > 0 && ckCnt >= pointCnt {
 			task.Status = model.InspCompleted
-			_ = tx.Save(&task)
+			if err := tx.Save(&task).Error; err != nil {
+				return err
+			}
 		}
-		_ = tx.Create(&model.IdempotencyRecord{KeyHash: key, Response: fmt.Sprintf("%d", rec.ID)})
+		if err := claimIdempotency(tx, key, fmt.Sprintf("%d", rec.ID)); err != nil {
+			return err
+		}
 		ck = rec
 		return nil
 	})

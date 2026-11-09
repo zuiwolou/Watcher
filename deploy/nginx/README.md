@@ -1,9 +1,11 @@
-# Nginx 反代（占位）
+# Nginx 反代
 
-生产建议：
+样例配置见同目录 [`watcher.conf`](watcher.conf)。
 
-- 静态：`frontend/admin/dist`、`frontend/portal/dist`
-- 反代 `/api/` → `webhttp:8080`
-- 反代 `/api/v1/stream` → WSS（经 webhttp 鉴权后到 push）
+要点：
 
-配置样例后续补齐。
+1. 静态托管打包产物 `web/admin`、`web/portal`
+2. `/api/` → webhttp `:8080`
+3. `/v1/stream` 开启 WebSocket 升级头，反代到 webhttp（内部再转到 push）
+
+生产请配合 TLS（443）与 `WATCHER_WS_ORIGINS` 白名单。

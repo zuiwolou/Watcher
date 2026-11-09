@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,12 +18,27 @@ import (
 	"watcher/backend/internal/biz/internal/model"
 )
 
+// EventPublisher is optional NSQ (or compatible) publisher for config/biz events.
+type EventPublisher interface {
+	Publish(topic string, producer string, payload any) error
+}
+
 type Service struct {
-	db *gorm.DB
+	db  *gorm.DB
+	pub EventPublisher
 }
 
 func New(db *gorm.DB) *Service {
 	return &Service{db: db}
+}
+
+func (s *Service) SetPublisher(p EventPublisher) { s.pub = p }
+
+func (s *Service) publish(topic, producer string, payload any) {
+	if s == nil || s.pub == nil {
+		return
+	}
+	_ = s.pub.Publish(topic, producer, payload)
 }
 
 func (s *Service) AutoMigrate() error {
@@ -56,6 +72,10 @@ func (s *Service) AutoMigrate() error {
 		&model.InspectionCheckin{},
 		&model.ThresholdRule{},
 		&model.Geofence{},
+		&model.MqttSchemaProfile{},
+		&model.IntegrationConfig{},
+		&model.Device{},
+		&model.IntegrationOutbox{},
 	)
 }
 
@@ -66,6 +86,12 @@ func (s *Service) SeedWarehouse(id, code, name string) error {
 		return nil
 	}
 	return s.db.Create(&model.Warehouse{ID: id, Code: code, Name: name, Status: 1}).Error
+}
+
+func (s *Service) ListWarehouses(ctx context.Context) ([]model.Warehouse, error) {
+	var list []model.Warehouse
+	err := s.db.WithContext(ctx).Where("status = ?", 1).Find(&list).Error
+	return list, err
 }
 
 func (s *Service) SeedDefaults() error {
@@ -105,12 +131,7 @@ func (s *Service) CreateMaterial(ctx context.Context, in CreateMaterialInput) (*
 }
 
 func (s *Service) ListMaterials(ctx context.Context, page, pageSize int) ([]model.Material, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
+	page, pageSize = normalizePage(page, pageSize)
 	var total int64
 	q := s.db.WithContext(ctx).Model(&model.Material{})
 	if err := q.Count(&total).Error; err != nil {
@@ -159,18 +180,25 @@ func (s *Service) IssueCodes(ctx context.Context, orderID uint64, count int) ([]
 	}
 	var order model.InboundOrder
 	if err := s.db.WithContext(ctx).First(&order, orderID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("%s: inbound order", errcode.NotFound)
+		}
 		return nil, err
 	}
 	var item model.InboundOrderItem
 	if err := s.db.WithContext(ctx).Where("inbound_order_id = ?", orderID).First(&item).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("%s: inbound order item", errcode.NotFound)
+		}
 		return nil, err
 	}
 	now := time.Now()
+	prefix := fmt.Sprintf("HW%s", now.Format("150405"))
 	codes := make([]model.UniqueCode, 0, count)
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for i := 0; i < count; i++ {
 			c := model.UniqueCode{
-				Code:           fmt.Sprintf("HW%s%04d", time.Now().Format("150405"), i+1) + uuid.NewString()[:4],
+				Code:           fmt.Sprintf("%s%04d%s", prefix, i+1, uuid.NewString()[:4]),
 				MaterialID:     item.MaterialID,
 				WarehouseID:    order.WarehouseID,
 				Status:         model.CodeIssued,
@@ -207,11 +235,10 @@ func (s *Service) ConfirmInbound(ctx context.Context, in ConfirmInboundInput) (*
 		return nil, fmt.Errorf("%s: clientRequestId required", errcode.ValidationError)
 	}
 	key := hashKey("inbound_confirm:" + in.ClientRequestID)
-	var existing model.IdempotencyRecord
-	if err := s.db.Where("key_hash = ?", key).First(&existing).Error; err == nil {
-		return &ConfirmResult{UniqueCode: in.UniqueCode, Status: model.CodeInStock, Replayed: true}, nil
-	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if hit, err := replayed(s.db.WithContext(ctx), key); err != nil {
 		return nil, err
+	} else if hit {
+		return &ConfirmResult{UniqueCode: in.UniqueCode, Status: model.CodeInStock, Replayed: true}, nil
 	}
 
 	var result *ConfirmResult
@@ -263,10 +290,22 @@ func (s *Service) ConfirmInbound(ctx context.Context, in ConfirmInboundInput) (*
 		if err := tx.Save(&order).Error; err != nil {
 			return err
 		}
-		_ = tx.Create(&model.IdempotencyRecord{KeyHash: key, Response: code.Code}).Error
+		// 幂等键写入放在事务内：并发重复提交会命中唯一键并回滚，避免重复入账（需求 9.4）。
+		if err := claimIdempotency(tx, key, code.Code); err != nil {
+			return err
+		}
+		if err := s.enqueueBizOutbox(tx, "inbound.confirmed", "inbound", fmt.Sprintf("%d", order.ID), map[string]any{
+			"orderId": order.ID, "orderNo": order.OrderNo, "warehouseId": order.WarehouseID,
+			"uniqueCode": code.Code, "materialId": code.MaterialID, "operatorId": in.OperatorID,
+		}); err != nil {
+			return err
+		}
 		result = &ConfirmResult{UniqueCode: code.Code, Status: code.Status}
 		return nil
 	})
+	if err == nil && result != nil && !result.Replayed {
+		s.publish("biz.event.v1", "svc-biz", map[string]any{"eventType": "inbound.confirmed", "uniqueCode": result.UniqueCode})
+	}
 	return result, err
 }
 
@@ -284,8 +323,9 @@ func (s *Service) LockOutbound(ctx context.Context, in LockOutboundInput) (*Conf
 		return nil, fmt.Errorf("%s: clientRequestId required", errcode.ValidationError)
 	}
 	key := hashKey("outbound_lock:" + in.ClientRequestID)
-	var existing model.IdempotencyRecord
-	if err := s.db.Where("key_hash = ?", key).First(&existing).Error; err == nil {
+	if hit, err := replayed(s.db.WithContext(ctx), key); err != nil {
+		return nil, err
+	} else if hit {
 		return &ConfirmResult{UniqueCode: in.UniqueCode, Status: model.CodeLocked, Replayed: true}, nil
 	}
 
@@ -293,6 +333,9 @@ func (s *Service) LockOutbound(ctx context.Context, in LockOutboundInput) (*Conf
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var order model.OutboundOrder
 		if err := tx.First(&order, in.OrderID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%s: outbound order", errcode.NotFound)
+			}
 			return err
 		}
 		var code model.UniqueCode
@@ -324,8 +367,12 @@ func (s *Service) LockOutbound(ctx context.Context, in LockOutboundInput) (*Conf
 			return err
 		}
 		order.Status = model.OrderInProgress
-		_ = tx.Save(&order).Error
-		_ = tx.Create(&model.IdempotencyRecord{KeyHash: key, Response: code.Code}).Error
+		if err := tx.Save(&order).Error; err != nil {
+			return err
+		}
+		if err := claimIdempotency(tx, key, code.Code); err != nil {
+			return err
+		}
 		result = &ConfirmResult{UniqueCode: code.Code, Status: code.Status}
 		return nil
 	})
@@ -346,8 +393,9 @@ func (s *Service) ReceiveOutbound(ctx context.Context, in ReceiveOutboundInput) 
 		return nil, fmt.Errorf("%s: clientRequestId required", errcode.ValidationError)
 	}
 	key := hashKey("outbound_receive:" + in.ClientRequestID)
-	var existing model.IdempotencyRecord
-	if err := s.db.Where("key_hash = ?", key).First(&existing).Error; err == nil {
+	if hit, err := replayed(s.db.WithContext(ctx), key); err != nil {
+		return nil, err
+	} else if hit {
 		return &ConfirmResult{UniqueCode: in.UniqueCode, Status: model.CodeSigned, Replayed: true}, nil
 	}
 
@@ -355,6 +403,9 @@ func (s *Service) ReceiveOutbound(ctx context.Context, in ReceiveOutboundInput) 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var order model.OutboundOrder
 		if err := tx.First(&order, in.OrderID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%s: outbound order", errcode.NotFound)
+			}
 			return err
 		}
 		var code model.UniqueCode
@@ -367,17 +418,19 @@ func (s *Service) ReceiveOutbound(ctx context.Context, in ReceiveOutboundInput) 
 			return err
 		}
 		now := time.Now()
-		prev := code.Status
 		code.Status = model.CodeSigned
 		code.SignedAt = &now
 		if err := tx.Save(&code).Error; err != nil {
 			return err
 		}
-		if prev == model.CodeLocked {
-			if err := consumeLockedStock(tx, order.WarehouseID, code.MaterialID, 1, fmt.Sprintf("%d", order.ID), code.Code); err != nil {
-				return err
-			}
-		} else {
+		// 出库确认时已锁定库存：签收释放锁定并实扣。
+		// 若该码未走出库确认（例如仅由发车打卡进入在途），锁定不存在，则直接实扣，
+		// 避免 locked_qty 只增不减导致可用库存永久泄漏。
+		consumed, err := tryConsumeLockedStock(tx, order.WarehouseID, code.MaterialID, 1, fmt.Sprintf("%d", order.ID), code.Code)
+		if err != nil {
+			return err
+		}
+		if !consumed {
 			if err := adjustStock(tx, order.WarehouseID, code.MaterialID, -1, "outbound_receive", fmt.Sprintf("%d", order.ID), code.Code); err != nil {
 				return err
 			}
@@ -395,13 +448,27 @@ func (s *Service) ReceiveOutbound(ctx context.Context, in ReceiveOutboundInput) 
 		if err := tx.Create(conf).Error; err != nil {
 			return err
 		}
-		_ = tx.Create(&model.IdempotencyRecord{KeyHash: key, Response: code.Code}).Error
-		_ = tx.Model(&model.TransportTask{}).
+		if err := claimIdempotency(tx, key, code.Code); err != nil {
+			return err
+		}
+		// 签收后关联运输任务置为已签收（幂等：已签收的任务不再更新）。
+		if err := tx.Model(&model.TransportTask{}).
 			Where("outbound_order_id = ? AND status <> ?", order.ID, model.TransportSigned).
-			Update("status", model.TransportSigned)
+			Update("status", model.TransportSigned).Error; err != nil {
+			return err
+		}
+		if err := s.enqueueBizOutbox(tx, "outbound.received", "outbound", fmt.Sprintf("%d", order.ID), map[string]any{
+			"orderId": order.ID, "warehouseId": order.WarehouseID,
+			"uniqueCode": code.Code, "materialId": code.MaterialID, "operatorId": in.OperatorID,
+		}); err != nil {
+			return err
+		}
 		result = &ConfirmResult{UniqueCode: code.Code, Status: code.Status}
 		return nil
 	})
+	if err == nil && result != nil && !result.Replayed {
+		s.publish("biz.event.v1", "svc-biz", map[string]any{"eventType": "outbound.received", "uniqueCode": result.UniqueCode})
+	}
 	return result, err
 }
 
@@ -445,13 +512,18 @@ func (s *Service) ListStocks(ctx context.Context, warehouseID string) ([]model.S
 	return list, err
 }
 
+func (s *Service) ListOutboundOrders(ctx context.Context, page, pageSize int) ([]model.OutboundOrder, int64, error) {
+	page, pageSize = normalizePage(page, pageSize)
+	var total int64
+	q := s.db.WithContext(ctx).Model(&model.OutboundOrder{})
+	_ = q.Count(&total)
+	var list []model.OutboundOrder
+	err := q.Order("id desc").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
+	return list, total, err
+}
+
 func (s *Service) ListInboundOrders(ctx context.Context, page, pageSize int) ([]model.InboundOrder, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
+	page, pageSize = normalizePage(page, pageSize)
 	var total int64
 	q := s.db.WithContext(ctx).Model(&model.InboundOrder{})
 	_ = q.Count(&total)
@@ -501,25 +573,75 @@ func lockStock(tx *gorm.DB, warehouseID string, materialID uint64, qty float64) 
 	return tx.Save(&bal).Error
 }
 
+// consumeLockedStock 释放锁定并实扣；锁定不足时返回 STATE_INVALID 且不修改任何数据。
 func consumeLockedStock(tx *gorm.DB, warehouseID string, materialID uint64, qty float64, bizID, uniqueCode string) error {
+	ok, err := tryConsumeLockedStock(tx, warehouseID, materialID, qty, bizID, uniqueCode)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("%s: insufficient locked stock", errcode.StateInvalid)
+	}
+	return nil
+}
+
+// tryConsumeLockedStock 尝试释放锁定并实扣；返回 false 表示无足够锁定量（未做修改）。
+func tryConsumeLockedStock(tx *gorm.DB, warehouseID string, materialID uint64, qty float64, bizID, uniqueCode string) (bool, error) {
 	var bal model.StockBalance
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 		Where("warehouse_id = ? AND material_id = ?", warehouseID, materialID).
 		First(&bal).Error; err != nil {
-		return err
+		return false, err
 	}
 	if bal.LockedQty < qty || bal.Qty < qty {
-		return fmt.Errorf("%s: insufficient locked stock", errcode.StateInvalid)
+		return false, nil
 	}
 	bal.LockedQty -= qty
 	bal.Qty -= qty
 	if err := tx.Save(&bal).Error; err != nil {
-		return err
+		return false, err
 	}
-	return tx.Create(&model.StockLedger{
+	return true, tx.Create(&model.StockLedger{
 		WarehouseID: warehouseID, MaterialID: materialID, Delta: -qty,
 		BalanceAfter: bal.Qty, BizType: "outbound_receive", BizID: bizID, UniqueCode: uniqueCode,
 	}).Error
+}
+
+// normalizePage 统一分页参数：page 从 1 起，pageSize 默认 20、最大 100（需求 1.3）。
+func normalizePage(page, pageSize int) (int, int) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+	return page, pageSize
+}
+
+// replayed 判断幂等键是否已处理过；查询出错（非「记录不存在」）时向上抛出，避免把故障当新请求执行。
+func replayed(db *gorm.DB, key string) (bool, error) {
+	var rec model.IdempotencyRecord
+	err := db.Where("key_hash = ?", key).First(&rec).Error
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		return false, nil
+	default:
+		return false, err
+	}
+}
+
+// claimIdempotency 在事务内写入幂等记录；命中唯一键说明是重放，返回 IDEMPOTENT_REPLAY 让事务回滚。
+func claimIdempotency(tx *gorm.DB, key, response string) error {
+	err := tx.Create(&model.IdempotencyRecord{KeyHash: key, Response: response}).Error
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return fmt.Errorf("%s: duplicate clientRequestId", errcode.IdempotentReplay)
+	}
+	if err != nil && strings.Contains(err.Error(), "1062") { // MySQL 唯一键冲突兜底
+		return fmt.Errorf("%s: duplicate clientRequestId", errcode.IdempotentReplay)
+	}
+	return err
 }
 
 func hashKey(s string) string {

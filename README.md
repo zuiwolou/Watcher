@@ -2,7 +2,7 @@
 
 按职责划分的 monorepo。目录索引：[docs/guides/目录说明.md](docs/guides/目录说明.md)
 
-详情：[MVP说明](docs/guides/MVP说明.md) · [实施计划](docs/plan/实施计划.md) · [开发上手](docs/guides/开发上手.md)
+详情：[MVP说明](docs/guides/MVP说明.md) · [实施计划](docs/plan/实施计划.md) · [缺口评估与迭代计划](docs/plan/缺口评估与迭代计划.md) · [开发上手](docs/guides/开发上手.md)
 
 ## 快速启动
 

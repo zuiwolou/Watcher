@@ -6,19 +6,30 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 
-	"watcher/backend/pkg/errcode"
-	"watcher/backend/pkg/response"
 	bizsvc "watcher/backend/internal/biz/service"
 	"watcher/backend/internal/webhttp/middleware"
+	"watcher/backend/pkg/errcode"
+	"watcher/backend/pkg/response"
 )
 
 type BizHandler struct {
 	biz *bizsvc.Service
+	db  *gorm.DB
 }
 
-func NewBizHandler(biz *bizsvc.Service) *BizHandler {
-	return &BizHandler{biz: biz}
+func NewBizHandler(biz *bizsvc.Service, db *gorm.DB) *BizHandler {
+	return &BizHandler{biz: biz, db: db}
+}
+
+func (h *BizHandler) ListWarehouses(c *gin.Context) {
+	list, err := h.biz.ListWarehouses(c.Request.Context())
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.OK(c, list)
 }
 
 func (h *BizHandler) CreateMaterial(c *gin.Context) {
@@ -39,6 +50,7 @@ func (h *BizHandler) CreateMaterial(c *gin.Context) {
 		mapBizErr(c, err)
 		return
 	}
+	writeAudit(c, h.db, "material.create", "material", strconv.FormatUint(m.ID, 10), gin.H{"code": m.Code})
 	response.OK(c, m)
 }
 
@@ -127,7 +139,19 @@ func (h *BizHandler) ConfirmInbound(c *gin.Context) {
 		mapBizErr(c, err)
 		return
 	}
+	writeAudit(c, h.db, "inbound.confirm", "inbound_order", strconv.FormatUint(id, 10), gin.H{"uniqueCode": req.UniqueCode})
 	response.OK(c, res)
+}
+
+func (h *BizHandler) ListOutbound(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := h.biz.ListOutboundOrders(c.Request.Context(), page, size)
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.Page(c, list, page, size, total)
 }
 
 func (h *BizHandler) CreateOutbound(c *gin.Context) {
@@ -186,6 +210,7 @@ func (h *BizHandler) ConfirmOutbound(c *gin.Context) {
 		mapBizErr(c, err)
 		return
 	}
+	writeAudit(c, h.db, "outbound."+action, "outbound_order", strconv.FormatUint(id, 10), gin.H{"uniqueCode": req.UniqueCode})
 	response.OK(c, res)
 }
 

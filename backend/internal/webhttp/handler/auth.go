@@ -145,6 +145,7 @@ func (h *AuthHandler) respondTokens(c *gin.Context, user *iam.User) {
 		return
 	}
 
+	iam.WriteAudit(h.db, user.ID, "auth.login", "user", uid, c.GetHeader("X-Client"), c.ClientIP(), gin.H{"username": user.Username})
 	response.OK(c, gin.H{
 		"accessToken": access, "refreshToken": refreshPlain, "expiresIn": expiresIn,
 		"permissions": perms, "scopes": gin.H{"warehouseIds": whs}, "clients": cs,
