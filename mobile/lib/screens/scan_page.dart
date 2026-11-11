@@ -3,10 +3,21 @@ import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-/// Full-screen scanner; pops with scanned string.
+/// Full-screen scanner.
+/// - [continuous]=false (default): pops with first code.
+/// - [continuous]=true: calls [onCode] and stays open for next scan.
 class ScanPage extends StatefulWidget {
-  const ScanPage({super.key, this.title = '扫码'});
+  const ScanPage({
+    super.key,
+    this.title = '扫码',
+    this.continuous = false,
+    this.onCode,
+    this.progressText,
+  });
   final String title;
+  final bool continuous;
+  final Future<void> Function(String code)? onCode;
+  final String? progressText;
 
   @override
   State<ScanPage> createState() => _ScanPageState();
@@ -15,8 +26,10 @@ class ScanPage extends StatefulWidget {
 class _ScanPageState extends State<ScanPage> {
   final controller = MobileScannerController(detectionSpeed: DetectionSpeed.normal);
   bool _torch = false;
-  bool _handled = false;
+  bool _busy = false;
   String? _err;
+  String _lastMsg = '';
+  bool _lastErr = false;
   final manual = TextEditingController();
 
   @override
@@ -32,13 +45,39 @@ class _ScanPageState extends State<ScanPage> {
     }
   }
 
+  Future<void> _handleCode(String raw) async {
+    if (_busy) return;
+    _busy = true;
+    HapticFeedback.mediumImpact();
+    if (!widget.continuous) {
+      if (mounted) Navigator.of(context).pop(raw);
+      return;
+    }
+    try {
+      await widget.onCode?.call(raw);
+      if (mounted) {
+        setState(() {
+          _lastMsg = '成功：$raw';
+          _lastErr = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _lastMsg = e.toString();
+          _lastErr = true;
+        });
+      }
+    } finally {
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      _busy = false;
+    }
+  }
+
   void _onDetect(BarcodeCapture cap) {
-    if (_handled) return;
     final raw = cap.barcodes.isEmpty ? null : cap.barcodes.first.rawValue;
     if (raw == null || raw.isEmpty) return;
-    _handled = true;
-    HapticFeedback.mediumImpact();
-    Navigator.of(context).pop(raw);
+    _handleCode(raw);
   }
 
   @override
@@ -68,6 +107,20 @@ class _ScanPageState extends State<ScanPage> {
       ),
       body: Column(
         children: [
+          if (widget.progressText != null)
+            Container(
+              width: double.infinity,
+              color: const Color(0xFF0B3D4A),
+              padding: const EdgeInsets.all(10),
+              child: Text(widget.progressText!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+            ),
+          if (_lastMsg.isNotEmpty)
+            Container(
+              width: double.infinity,
+              color: _lastErr ? Colors.red.shade800 : Colors.green.shade800,
+              padding: const EdgeInsets.all(8),
+              child: Text(_lastMsg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+            ),
           Expanded(
             child: _err != null
                 ? Center(child: Text(_err!, style: const TextStyle(color: Colors.white70)))
@@ -75,9 +128,7 @@ class _ScanPageState extends State<ScanPage> {
                     fit: StackFit.expand,
                     children: [
                       MobileScanner(controller: controller, onDetect: _onDetect),
-                      IgnorePointer(
-                        child: CustomPaint(painter: _FramePainter()),
-                      ),
+                      IgnorePointer(child: CustomPaint(painter: _FramePainter())),
                     ],
                   ),
           ),
@@ -102,7 +153,8 @@ class _ScanPageState extends State<ScanPage> {
                   onPressed: () {
                     final v = manual.text.trim();
                     if (v.isEmpty) return;
-                    Navigator.of(context).pop(v);
+                    manual.clear();
+                    _handleCode(v);
                   },
                   child: const Text('确定'),
                 ),

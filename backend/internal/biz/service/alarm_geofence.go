@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"gorm.io/gorm"
@@ -185,7 +186,113 @@ func pointInPolygon(lat, lng float64, points [][2]float64) bool {
 	return inside
 }
 
-func (s *Service) UpsertGeofence(ctx context.Context, id uint64, warehouseID, name, shapeType, geoJSON string, hysteresis float64, enabled bool) (*model.Geofence, error) {
+// GeofenceSchedule describes when a fence is active.
+// Empty Windows = always active. dow uses Go time.Weekday (0=Sunday).
+// Example: {"windows":[{"dow":[1,2,3,4,5],"start":"08:00","end":"18:00"}]}
+type GeofenceSchedule struct {
+	Windows []GeofenceWindow `json:"windows"`
+}
+
+type GeofenceWindow struct {
+	Dow   []int  `json:"dow"` // empty = every day
+	Start string `json:"start"` // HH:MM local
+	End   string `json:"end"`   // HH:MM local
+}
+
+func geofenceActiveNow(scheduleJSON string, now time.Time) bool {
+	if scheduleJSON == "" || scheduleJSON == "{}" || scheduleJSON == "null" {
+		return true
+	}
+	var sch GeofenceSchedule
+	if err := json.Unmarshal([]byte(scheduleJSON), &sch); err != nil || len(sch.Windows) == 0 {
+		return true
+	}
+	dow := int(now.Weekday())
+	hm := now.Hour()*60 + now.Minute()
+	for _, w := range sch.Windows {
+		dayOK := len(w.Dow) == 0
+		for _, d := range w.Dow {
+			if d == dow {
+				dayOK = true
+				break
+			}
+		}
+		if !dayOK {
+			continue
+		}
+		startM, ok1 := parseHHMM(w.Start)
+		endM, ok2 := parseHHMM(w.End)
+		if !ok1 || !ok2 {
+			continue
+		}
+		if startM <= endM {
+			if hm >= startM && hm <= endM {
+				return true
+			}
+		} else { // overnight window
+			if hm >= startM || hm <= endM {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func parseHHMM(s string) (int, bool) {
+	if len(s) < 4 {
+		return 0, false
+	}
+	var h, m int
+	if _, err := fmt.Sscanf(s, "%d:%d", &h, &m); err != nil {
+		return 0, false
+	}
+	if h < 0 || h > 23 || m < 0 || m > 59 {
+		return 0, false
+	}
+	return h*60 + m, true
+}
+
+// distPointToSegmentM approximates meter distance from P to segment AB (lat/lng degrees).
+func distPointToSegmentM(plat, plng, alat, alng, blat, blng float64) float64 {
+	// Project in local meters using crude equirectangular around A.
+	const R = 6371000.0
+	toRad := math.Pi / 180
+	ax, ay := 0.0, 0.0
+	cosLat := math.Cos(alat * toRad)
+	bx := (blng - alng) * toRad * R * cosLat
+	by := (blat - alat) * toRad * R
+	px := (plng - alng) * toRad * R * cosLat
+	py := (plat - alat) * toRad * R
+	ab2 := bx*bx + by*by
+	if ab2 < 1e-9 {
+		return math.Hypot(px, py)
+	}
+	t := ((px-ax)*bx + (py-ay)*by) / ab2
+	if t < 0 {
+		t = 0
+	} else if t > 1 {
+		t = 1
+	}
+	return math.Hypot(px-(ax+t*bx), py-(ay+t*by))
+}
+
+func minDistToPolygonEdgeM(lat, lng float64, points [][2]float64) float64 {
+	n := len(points)
+	if n < 2 {
+		return math.Inf(1)
+	}
+	minD := math.Inf(1)
+	for i := 0; i < n; i++ {
+		j := (i + 1) % n
+		d := distPointToSegmentM(lat, lng, points[i][0], points[i][1], points[j][0], points[j][1])
+		if d < minD {
+			minD = d
+		}
+	}
+	return minD
+}
+
+func (s *Service) UpsertGeofence(ctx context.Context, id uint64, warehouseID, name, shapeType, geoJSON string, hysteresis float64, enabled bool, scheduleJSON string) (*model.Geofence, error) {
 	if shapeType == "" {
 		shapeType = "circle"
 	}
@@ -204,6 +311,12 @@ func (s *Service) UpsertGeofence(ctx context.Context, id uint64, warehouseID, na
 			return nil, fmt.Errorf("%s: polygon geoJson requires points[[lat,lng],...] >= 3", errcode.ValidationError)
 		}
 	}
+	if scheduleJSON != "" && scheduleJSON != "{}" {
+		var sch GeofenceSchedule
+		if err := json.Unmarshal([]byte(scheduleJSON), &sch); err != nil {
+			return nil, fmt.Errorf("%s: scheduleJson invalid", errcode.ValidationError)
+		}
+	}
 	if id > 0 {
 		var g model.Geofence
 		if err := s.db.First(&g, id).Error; err != nil {
@@ -211,6 +324,7 @@ func (s *Service) UpsertGeofence(ctx context.Context, id uint64, warehouseID, na
 		}
 		g.Name, g.ShapeType, g.GeoJSON = name, shapeType, geoJSON
 		g.HysteresisM, g.Enabled = hysteresis, enabled
+		g.ScheduleJSON = scheduleJSON
 		g.Version++
 		if err := s.db.Save(&g).Error; err != nil {
 			return nil, err
@@ -219,7 +333,7 @@ func (s *Service) UpsertGeofence(ctx context.Context, id uint64, warehouseID, na
 	}
 	g := &model.Geofence{
 		WarehouseID: warehouseID, Name: name, ShapeType: shapeType, GeoJSON: geoJSON,
-		HysteresisM: hysteresis, Enabled: enabled, Version: 1,
+		HysteresisM: hysteresis, ScheduleJSON: scheduleJSON, Enabled: enabled, Version: 1,
 	}
 	if err := s.db.Create(g).Error; err != nil {
 		return nil, err
@@ -237,14 +351,18 @@ func (s *Service) ListGeofences(ctx context.Context, warehouseID string) ([]mode
 	return list, err
 }
 
-// EvaluateLocation checks circle geofences; outside => alarm.
+// EvaluateLocation checks geofences; outside (with hysteresis) => alarm. Inactive schedule skipped.
 func (s *Service) EvaluateLocation(ctx context.Context, warehouseID, deviceID string, lat, lng float64) ([]model.Alarm, error) {
 	var fences []model.Geofence
 	if err := s.db.WithContext(ctx).Where("warehouse_id = ? AND enabled = ?", warehouseID, true).Find(&fences).Error; err != nil {
 		return nil, err
 	}
+	now := time.Now()
 	var raised []model.Alarm
 	for _, f := range fences {
+		if !geofenceActiveNow(f.ScheduleJSON, now) {
+			continue
+		}
 		outside := false
 		var distM float64
 		switch f.ShapeType {
@@ -261,8 +379,14 @@ func (s *Service) EvaluateLocation(ctx context.Context, warehouseID, deviceID st
 				continue
 			}
 			inside := pointInPolygon(lat, lng, poly.Points)
-			outside = !inside
-			distM = 0
+			if inside {
+				outside = false
+				distM = 0
+			} else {
+				distM = minDistToPolygonEdgeM(lat, lng, poly.Points)
+				// 滞回：距边 ≤ HysteresisM 仍视为未越界
+				outside = distM > f.HysteresisM
+			}
 		default:
 			continue // unsupported shape
 		}
@@ -285,10 +409,23 @@ func (s *Service) EvaluateLocation(ctx context.Context, warehouseID, deviceID st
 			DeviceID: deviceID, RaisedAt: time.Now(),
 			DetailJSON: fmt.Sprintf(`{"lat":%f,"lng":%f,"distanceM":%f,"shape":"%s"}`, lat, lng, distM, f.ShapeType),
 		}
-		if err := s.db.Create(&a).Error; err != nil {
+		err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			if err := tx.Create(&a).Error; err != nil {
+				return err
+			}
+			return s.enqueueBizOutbox(tx, "alarm.raised", "alarm", fmt.Sprintf("%d", a.ID), map[string]any{
+				"alarmId": a.ID, "warehouseId": warehouseID, "deviceId": deviceID,
+				"ruleCode": a.RuleCode, "title": a.Title, "lat": lat, "lng": lng,
+			})
+		})
+		if err != nil {
 			return raised, err
 		}
 		raised = append(raised, a)
+		s.publish(bus.TopicAlarm, "svc-biz", map[string]any{
+			"alarmId": a.ID, "warehouseId": warehouseID, "deviceId": deviceID,
+			"ruleCode": a.RuleCode, "title": a.Title, "lat": lat, "lng": lng, "level": a.Level,
+		})
 	}
 	return raised, nil
 }

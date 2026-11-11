@@ -4,7 +4,7 @@ package iam
 var Catalog = [][2]string{
 	{"portal", "access"}, {"admin", "access"}, {"app", "access"},
 	{"user", "view"}, {"user", "edit"}, {"role", "view"}, {"role", "edit"}, {"audit", "view"},
-	{"warehouse", "view"}, {"inbound", "edit"}, {"inbound", "confirm"}, {"outbound", "edit"}, {"outbound", "confirm"}, {"code", "issue"},
+	{"warehouse", "view"}, {"inbound", "edit"}, {"inbound", "confirm"}, {"outbound", "edit"}, {"outbound", "confirm"}, {"code", "issue"}, {"code", "void"},
 	{"material", "view"}, {"material", "edit"}, {"material", "export"}, {"stock", "adjust"},
 	{"approval", "view"}, {"approval", "act"},
 	{"inventory", "view"}, {"inventory", "create"}, {"inventory", "scan"}, {"inventory", "adjust"},

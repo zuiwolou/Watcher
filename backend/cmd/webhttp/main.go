@@ -116,17 +116,27 @@ func main() {
 	internal := r.Group("/internal")
 	internal.Use(middleware.InternalToken())
 	internal.POST("/monitor/evaluate", bizH.InternalEvaluateTelemetry)
+	internal.POST("/geofence/evaluate", bizH.InternalEvaluateGeofence)
 
 	v1 := r.Group("/api/v1")
 	{
 		v1.POST("/auth/login", authH.Login)
 		v1.POST("/auth/refresh", authH.Refresh)
 
+		// Regulatory inbound OpenAPI (independent credentials, no business JWT)
+		openAPI := v1.Group("/open")
+		openAPI.Use(middleware.OpenAPIAuth(biz))
+		openAPI.GET("/materials", bizH.OpenListMaterials)
+		openAPI.GET("/stocks", bizH.OpenListStocks)
+		openAPI.GET("/alarms", bizH.OpenListAlarms)
+		openAPI.GET("/unique-codes", bizH.OpenListUniqueCodes)
+
 		authed := v1.Group("")
 		authed.Use(middleware.JWT(jwtMgr))
 		authed.GET("/me", authH.Me)
 		authed.GET("/me/permissions", authH.Me)
 		authed.POST("/auth/change-password", authH.ChangePassword)
+		authed.POST("/auth/logout", authH.Logout)
 
 		// Admin-only: IAM / schema / integrations / devices / outbox
 		admin := authed.Group("")
@@ -159,8 +169,12 @@ func main() {
 		bizAPI.GET("/warehouses", middleware.RequirePerm(enforcer, "warehouse", "view"), bizH.ListWarehouses)
 		bizAPI.GET("/materials", middleware.RequirePerm(enforcer, "material", "view"), bizH.ListMaterials)
 		bizAPI.POST("/materials", middleware.RequirePerm(enforcer, "material", "edit"), bizH.CreateMaterial)
+		bizAPI.PUT("/materials/:id", middleware.RequirePerm(enforcer, "material", "edit"), bizH.UpdateMaterial)
 		bizAPI.GET("/stocks", middleware.RequirePerm(enforcer, "material", "view"), bizH.ListStocks)
+		bizAPI.GET("/unique-codes", middleware.RequirePerm(enforcer, "material", "view"), bizH.ListUniqueCodes)
+		bizAPI.GET("/unique-codes/export", middleware.RequirePerm(enforcer, "material", "export"), bizH.ExportUniqueCodesCSV)
 		bizAPI.GET("/unique-codes/:code", middleware.RequirePerm(enforcer, "material", "view"), bizH.GetUniqueCode)
+		bizAPI.POST("/unique-codes/:code/void", middleware.RequirePerm(enforcer, "code", "void"), bizH.VoidUniqueCode)
 
 		bizAPI.GET("/inbound/orders", middleware.RequirePerm(enforcer, "warehouse", "view"), bizH.ListInbound)
 		bizAPI.POST("/inbound/orders", middleware.RequirePerm(enforcer, "inbound", "edit"), bizH.CreateInbound)
@@ -216,6 +230,7 @@ func main() {
 		historyBase := envOr("WATCHER_HISTORY_URL", "http://127.0.0.1:8082")
 		bizAPI.GET("/history/telemetry", middleware.RequirePerm(enforcer, "monitor", "view"), handler.HistoryProxy(historyBase, "/api/v1/history/telemetry"))
 		bizAPI.GET("/history/tracks", middleware.RequirePerm(enforcer, "track", "view"), handler.HistoryProxy(historyBase, "/api/v1/history/tracks"))
+		bizAPI.GET("/history/alarms", middleware.RequirePerm(enforcer, "alarm", "view"), handler.HistoryProxy(historyBase, "/api/v1/history/alarms"))
 	}
 
 	pushBase := envOr("WATCHER_PUSH_URL", "http://127.0.0.1:8083")

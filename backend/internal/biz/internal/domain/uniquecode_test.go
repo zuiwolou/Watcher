@@ -13,9 +13,13 @@ func TestCanTransit(t *testing.T) {
 	}{
 		{model.CodeIssued, model.CodeInStock, true},
 		{model.CodeInStock, model.CodeLocked, true},
+		{model.CodeInStock, model.CodeVoided, true},
 		{model.CodeLocked, model.CodeSigned, true},
+		{model.CodeLocked, model.CodeVoided, true},
 		{model.CodeInTransit, model.CodeSigned, true},
+		{model.CodeInTransit, model.CodeVoided, true},
 		{model.CodeSigned, model.CodeInStock, false},
+		{model.CodeSigned, model.CodeVoided, false},
 		{model.CodeIssued, model.CodeSigned, false},
 	}
 	for _, tc := range cases {

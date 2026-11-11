@@ -85,6 +85,7 @@ func main() {
 	topic := env("WATCHER_MQTT_TOPIC", "watcher/+/telemetry")
 	historyURL := env("WATCHER_HISTORY_URL", "http://127.0.0.1:8082/internal/ingest")
 	webEvalURL := env("WATCHER_WEB_EVAL_URL", "http://127.0.0.1:8080/internal/monitor/evaluate")
+	geoEvalURL := env("WATCHER_GEO_EVAL_URL", "http://127.0.0.1:8080/internal/geofence/evaluate")
 	internalToken := env("WATCHER_INTERNAL_TOKEN", "dev-internal-token")
 	nsqd := env("WATCHER_NSQD", "127.0.0.1:4150")
 	nsqlookup := env("WATCHER_NSQLOOKUPD", "127.0.0.1:4161")
@@ -158,19 +159,31 @@ func main() {
 				_ = pub.Publish(bus.TopicCanonical, "svc-mqtt", m)
 			}
 			b, _ := json.Marshal(m)
-			resp, err := http.Post(historyURL, "application/json", bytes.NewReader(b))
-			if err == nil {
+			reqHist, _ := http.NewRequest(http.MethodPost, historyURL, bytes.NewReader(b))
+			reqHist.Header.Set("Content-Type", "application/json")
+			reqHist.Header.Set("X-Internal-Token", internalToken)
+			if resp, err := http.DefaultClient.Do(reqHist); err == nil {
 				_ = resp.Body.Close()
 			}
-			if webEvalURL != "" && m.MsgType != "location" && len(m.Metrics) > 0 {
+			if m.MsgType == "location" && geoEvalURL != "" && m.Location != nil && m.WarehouseID != "" {
+				body, _ := json.Marshal(map[string]any{
+					"warehouseId": m.WarehouseID, "deviceId": m.DeviceID,
+					"lat": m.Location.Lat, "lng": m.Location.Lng,
+				})
+				req, _ := http.NewRequest(http.MethodPost, geoEvalURL, bytes.NewReader(body))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("X-Internal-Token", internalToken)
+				if r2, err := http.DefaultClient.Do(req); err == nil {
+					_ = r2.Body.Close()
+				}
+			} else if webEvalURL != "" && m.MsgType != "location" && len(m.Metrics) > 0 {
 				body, _ := json.Marshal(map[string]any{
 					"warehouseId": m.WarehouseID, "deviceId": m.DeviceID, "metrics": m.Metrics,
 				})
 				req, _ := http.NewRequest(http.MethodPost, webEvalURL, bytes.NewReader(body))
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("X-Internal-Token", internalToken)
-				r2, err := http.DefaultClient.Do(req)
-				if err == nil {
+				if r2, err := http.DefaultClient.Do(req); err == nil {
 					_ = r2.Body.Close()
 				}
 			}

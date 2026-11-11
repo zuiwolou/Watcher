@@ -32,6 +32,12 @@
             <el-form-item v-if="drawMode==='circle'" label="半径m">
               <el-slider v-model="draft.radiusM" :min="50" :max="5000" :step="10" show-input />
             </el-form-item>
+            <el-form-item label="滞回m">
+              <el-input-number v-model="draft.hysteresisM" :min="0" :max="500" :step="5" />
+            </el-form-item>
+            <el-form-item label="时段">
+              <el-input v-model="draft.scheduleJson" type="textarea" :rows="2" placeholder='空=全天；例 {"windows":[{"dow":[1,2,3,4,5],"start":"08:00","end":"18:00"}]}' />
+            </el-form-item>
             <el-form-item label="中心/点">
               <pre class="mono">{{ draftPreview }}</pre>
             </el-form-item>
@@ -58,7 +64,7 @@ const warehouseId = ref('')
 const list = ref([])
 const mapEl = ref(null)
 const drawMode = ref('circle')
-const draft = reactive({ name: '主围栏', lat: 31.2304, lng: 121.4737, radiusM: 500 })
+const draft = reactive({ name: '主围栏', lat: 31.2304, lng: 121.4737, radiusM: 500, hysteresisM: 0, scheduleJson: '' })
 const vertices = ref([])
 let map, L, draftLayer, fenceLayers = []
 
@@ -190,6 +196,8 @@ async function saveDraft() {
     warehouseId: warehouseId.value,
     name: draft.name,
     shapeType: drawMode.value,
+    hysteresisM: draft.hysteresisM || 0,
+    scheduleJson: (draft.scheduleJson || '').trim(),
     enabled: true
   }
   if (drawMode.value === 'circle') {

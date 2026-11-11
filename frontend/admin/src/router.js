@@ -20,11 +20,14 @@ import History from './views/History.vue'
 import Audit from './views/Audit.vue'
 import MqttSchema from './views/MqttSchema.vue'
 import Integrations from './views/Integrations.vue'
+import Devices from './views/Devices.vue'
 import ChangePassword from './views/ChangePassword.vue'
+import Forbidden from './views/Forbidden.vue'
 
 const routes = [
   { path: '/login', component: Login },
   { path: '/change-password', component: ChangePassword },
+  { path: '/403', component: Forbidden },
   {
     path: '/',
     component: Layout,
@@ -43,6 +46,7 @@ const routes = [
       { path: 'alarms', component: Alarms, meta: { perm: 'alarm:view' } },
       { path: 'thresholds', component: Thresholds, meta: { perm: 'threshold:edit' } },
       { path: 'geofences', component: Geofences, meta: { perm: 'geofence:view' } },
+      { path: 'devices', component: Devices, meta: { perm: 'device:edit' } },
       { path: 'history', component: History, meta: { perm: 'monitor:view' } },
       { path: 'audit', component: Audit, meta: { perm: 'audit:view' } },
       { path: 'mqtt-schema', component: MqttSchema, meta: { perm: 'mqtt:schema:edit' } },
@@ -54,12 +58,12 @@ const routes = [
 const router = createRouter({ history: createWebHistory(), routes })
 
 router.beforeEach((to) => {
-  if (to.path === '/login') return true
+  if (to.path === '/login' || to.path === '/403') return true
   if (!localStorage.getItem('accessToken')) return '/login'
   if (localStorage.getItem('mustChangePassword') === '1' && to.path !== '/change-password') {
     return '/change-password'
   }
-  if (to.meta.perm && !hasPerm(to.meta.perm)) return '/'
+  if (to.meta.perm && !hasPerm(to.meta.perm)) return '/403'
   return true
 })
 

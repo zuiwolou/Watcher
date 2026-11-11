@@ -148,3 +148,23 @@ func (h *BizHandler) InternalEvaluateTelemetry(c *gin.Context) {
 	}
 	response.OK(c, alarms)
 }
+
+// InternalEvaluateGeofence is for svc-mqtt location frames (X-Internal-Token).
+func (h *BizHandler) InternalEvaluateGeofence(c *gin.Context) {
+	var req struct {
+		WarehouseID string  `json:"warehouseId" binding:"required"`
+		DeviceID    string  `json:"deviceId"`
+		Lat         float64 `json:"lat" binding:"required"`
+		Lng         float64 `json:"lng" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, http.StatusBadRequest, errcode.ValidationError, err.Error())
+		return
+	}
+	alarms, err := h.biz.EvaluateLocation(c.Request.Context(), req.WarehouseID, req.DeviceID, req.Lat, req.Lng)
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.OK(c, alarms)
+}

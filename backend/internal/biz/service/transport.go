@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"watcher/backend/internal/biz/internal/domain"
 	"watcher/backend/internal/biz/internal/model"
+	"watcher/backend/pkg/bus"
+	"watcher/backend/pkg/canonical"
 	"watcher/backend/pkg/errcode"
 )
 
@@ -95,6 +98,10 @@ func (s *Service) SubmitCheckin(ctx context.Context, in SubmitCheckinInput) (*mo
 	default:
 		return nil, fmt.Errorf("%s: invalid nodeType", errcode.ValidationError)
 	}
+	// 发车/到达节点后端强制必拍（与 APP 一致）
+	if (in.NodeType == model.CheckinDepart || in.NodeType == model.CheckinArrive) && in.PhotoKey == "" {
+		return nil, fmt.Errorf("%s: photo required for %s", errcode.ValidationError, in.NodeType)
+	}
 	key := hashKey("transport_checkin:" + in.ClientRequestID)
 	if hit, err := replayed(s.db.WithContext(ctx), key); err != nil {
 		return nil, err
@@ -152,7 +159,36 @@ func (s *Service) SubmitCheckin(ctx context.Context, in SubmitCheckinInput) (*mo
 		result = ck
 		return nil
 	})
-	return result, err
+	if err != nil {
+		return nil, err
+	}
+	// Best-effort：发位置到 history + 围栏评估（不失败打卡）。
+	if in.Lat != nil && in.Lng != nil {
+		wh := ""
+		var task model.TransportTask
+		if e := s.db.WithContext(ctx).First(&task, in.TaskID).Error; e == nil {
+			wh = task.WarehouseID
+		}
+		if wh == "" {
+			wh = "WH01"
+		}
+		deviceID := in.UniqueCode
+		if deviceID == "" {
+			deviceID = fmt.Sprintf("checkin-%d", in.TaskID)
+		}
+		acc := 0.0
+		if in.Accuracy != nil {
+			acc = *in.Accuracy
+		}
+		s.publish(bus.TopicCanonical, "svc-biz", canonical.Message{
+			Ver: 1, MsgID: uuid.NewString(), MsgType: "location",
+			TsUnixMs: time.Now().UnixMilli(), WarehouseID: wh, DeviceID: deviceID,
+			Location: &canonical.Location{Lat: *in.Lat, Lng: *in.Lng, Accuracy: acc, UnitID: fmt.Sprintf("task-%d", in.TaskID)},
+			Custom:   map[string]any{"source": "transport_checkin", "nodeType": in.NodeType, "taskId": in.TaskID},
+		})
+		_, _ = s.EvaluateLocation(ctx, wh, deviceID, *in.Lat, *in.Lng)
+	}
+	return result, nil
 }
 
 func (s *Service) ListCheckins(ctx context.Context, taskID uint64) ([]model.TransportCheckin, error) {

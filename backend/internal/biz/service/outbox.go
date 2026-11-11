@@ -94,10 +94,34 @@ type outboxEndpoint struct {
 	Method     string            `json:"method"`
 	Headers    map[string]string `json:"headers"`
 	TimeoutSec int               `json:"timeoutSec"`
-	Path       string            `json:"path"` // sftp local path or remote path hint
+	Path       string            `json:"path"` // sftp remote dir or local drop dir
 	Host       string            `json:"host"`
+	Port       int               `json:"port"`
 	Username   string            `json:"username"`
 	Password   string            `json:"password"`
+	// FieldMap maps internal payload keys -> regulator keys (BE-08).
+	// Example: {"alarmId":"alarm_id","warehouseId":"wh_code"}
+	FieldMap map[string]string `json:"fieldMap"`
+}
+
+// applyFieldMap renames top-level payload keys when FieldMap is set; unmapped keys kept.
+func applyFieldMap(payloadJSON string, fieldMap map[string]string) ([]byte, error) {
+	var body map[string]any
+	if err := json.Unmarshal([]byte(payloadJSON), &body); err != nil {
+		return []byte(payloadJSON), nil
+	}
+	if len(fieldMap) == 0 {
+		return json.Marshal(body)
+	}
+	out := make(map[string]any, len(body))
+	for k, v := range body {
+		if nk, ok := fieldMap[k]; ok && nk != "" {
+			out[nk] = v
+		} else {
+			out[k] = v
+		}
+	}
+	return json.Marshal(out)
 }
 
 // ProcessOutboxBatch delivers pending rows (true HTTP for openapi; sftp writes local drop file).
@@ -173,15 +197,19 @@ func deliverHTTP(ctx context.Context, ep outboxEndpoint, row *model.IntegrationO
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}
+	mapped, err := applyFieldMap(row.PayloadJSON, ep.FieldMap)
+	if err != nil {
+		return err
+	}
 	body := map[string]any{}
-	_ = json.Unmarshal([]byte(row.PayloadJSON), &body)
+	_ = json.Unmarshal(mapped, &body)
 	envelope := map[string]any{
-		"eventType": row.EventType,
-		"bizType":   row.BizType,
-		"bizId":     row.BizID,
-		"channel":   row.Channel,
-		"outboxId":  row.ID,
-		"payload":   body,
+		"eventType":  row.EventType,
+		"bizType":    row.BizType,
+		"bizId":      row.BizID,
+		"channel":    row.Channel,
+		"outboxId":   row.ID,
+		"payload":    body,
 		"occurredAt": time.Now().UTC().Format(time.RFC3339),
 	}
 	b, _ := json.Marshal(envelope)
@@ -207,16 +235,24 @@ func deliverHTTP(ctx context.Context, ep outboxEndpoint, row *model.IntegrationO
 }
 
 func deliverSFTPDrop(ep outboxEndpoint, row *model.IntegrationOutbox) error {
-	// MVP: write payload to local drop directory configured as path (true SFTP client can replace later).
-	dir := ep.Path
-	if dir == "" {
-		dir = "tmp/sftp-drop"
-	}
-	name := filepath.Join(strings.TrimRight(dir, `/\`), fmt.Sprintf("%d_%s_%s.json", row.ID, row.EventType, row.BizID))
-	if err := os.MkdirAll(filepath.Dir(name), 0o755); err != nil {
+	mapped, err := applyFieldMap(row.PayloadJSON, ep.FieldMap)
+	if err != nil {
 		return err
 	}
-	return os.WriteFile(name, []byte(row.PayloadJSON), 0o644)
+	fileName := fmt.Sprintf("%d_%s_%s.json", row.ID, row.EventType, row.BizID)
+	// Host 为空：本地落盘（开发/演示）；配置 Host 后走真 SFTP。
+	if strings.TrimSpace(ep.Host) == "" {
+		dir := ep.Path
+		if dir == "" {
+			dir = "tmp/sftp-drop"
+		}
+		name := filepath.Join(strings.TrimRight(dir, `/\`), fileName)
+		if err := os.MkdirAll(filepath.Dir(name), 0o755); err != nil {
+			return err
+		}
+		return os.WriteFile(name, mapped, 0o644)
+	}
+	return deliverSFTPRemote(ep, fileName, mapped)
 }
 
 func (s *Service) failOutbox(row *model.IntegrationOutbox, cause error) error {

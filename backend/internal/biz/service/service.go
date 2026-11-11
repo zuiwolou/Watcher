@@ -10,12 +10,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"watcher/backend/pkg/errcode"
 	"watcher/backend/internal/biz/internal/domain"
 	"watcher/backend/internal/biz/internal/model"
+	"watcher/backend/pkg/errcode"
 )
 
 // EventPublisher is optional NSQ (or compatible) publisher for config/biz events.
@@ -74,6 +75,7 @@ func (s *Service) AutoMigrate() error {
 		&model.Geofence{},
 		&model.MqttSchemaProfile{},
 		&model.IntegrationConfig{},
+		&model.OpenCredential{},
 		&model.Device{},
 		&model.IntegrationOutbox{},
 	)
@@ -107,6 +109,19 @@ func (s *Service) SeedDefaults() error {
 			return err
 		}
 	}
+	var oc int64
+	s.db.Model(&model.OpenCredential{}).Count(&oc)
+	if oc == 0 {
+		hash, err := bcrypt.GenerateFromPassword([]byte("OpenDemo@123"), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+		if err := s.db.Create(&model.OpenCredential{
+			ClientID: "open-demo", SecretHash: string(hash), Name: "监管入站演示凭证", Enabled: true,
+		}).Error; err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -128,6 +143,66 @@ func (s *Service) CreateMaterial(ctx context.Context, in CreateMaterialInput) (*
 		return nil, err
 	}
 	return m, nil
+}
+
+func (s *Service) UpdateMaterial(ctx context.Context, id uint64, in CreateMaterialInput) (*model.Material, error) {
+	var m model.Material
+	if err := s.db.WithContext(ctx).First(&m, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("%s: material", errcode.NotFound)
+		}
+		return nil, err
+	}
+	if in.Name != "" {
+		m.Name = in.Name
+	}
+	if in.WasteCode != "" {
+		m.WasteCode = in.WasteCode
+	}
+	if in.Category != "" {
+		m.Category = in.Category
+	}
+	if in.Unit != "" {
+		m.Unit = in.Unit
+	}
+	if in.Spec != "" {
+		m.Spec = in.Spec
+	}
+	if err := s.db.WithContext(ctx).Save(&m).Error; err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (s *Service) ListUniqueCodes(ctx context.Context, warehouseID, status, q string, page, pageSize int) ([]model.UniqueCode, int64, error) {
+	page, pageSize = normalizePage(page, pageSize)
+	dbq := s.db.WithContext(ctx).Model(&model.UniqueCode{})
+	if warehouseID != "" {
+		dbq = dbq.Where("warehouse_id = ?", warehouseID)
+	}
+	if status != "" {
+		dbq = dbq.Where("status = ?", status)
+	}
+	if q != "" {
+		like := "%" + q + "%"
+		dbq = dbq.Where("code LIKE ?", like)
+	}
+	var total int64
+	_ = dbq.Count(&total)
+	var list []model.UniqueCode
+	err := dbq.Order("id desc").Offset((page - 1) * pageSize).Limit(pageSize).Find(&list).Error
+	return list, total, err
+}
+
+func (s *Service) ValidateOpenCredential(ctx context.Context, clientID, secret string) (*model.OpenCredential, error) {
+	var c model.OpenCredential
+	if err := s.db.WithContext(ctx).Where("client_id = ? AND enabled = ?", clientID, true).First(&c).Error; err != nil {
+		return nil, fmt.Errorf("%s: open credential", errcode.AuthDenied)
+	}
+	if bcrypt.CompareHashAndPassword([]byte(c.SecretHash), []byte(secret)) != nil {
+		return nil, fmt.Errorf("%s: open credential", errcode.AuthDenied)
+	}
+	return &c, nil
 }
 
 func (s *Service) ListMaterials(ctx context.Context, page, pageSize int) ([]model.Material, int64, error) {
@@ -392,6 +467,9 @@ func (s *Service) ReceiveOutbound(ctx context.Context, in ReceiveOutboundInput) 
 	if in.ClientRequestID == "" {
 		return nil, fmt.Errorf("%s: clientRequestId required", errcode.ValidationError)
 	}
+	if in.PhotoKey == "" {
+		return nil, fmt.Errorf("%s: photo required for receive", errcode.ValidationError)
+	}
 	key := hashKey("outbound_receive:" + in.ClientRequestID)
 	if hit, err := replayed(s.db.WithContext(ctx), key); err != nil {
 		return nil, err
@@ -500,6 +578,51 @@ func (s *Service) GetUniqueCode(ctx context.Context, code string) (*model.Unique
 		return nil, fmt.Errorf("%s: unique code", errcode.NotFound)
 	}
 	return &c, err
+}
+
+// VoidUniqueCode transitions a code to voided. Signed codes are rejected by the state machine.
+// In-stock / locked codes also adjust stock balances so book qty stays consistent.
+func (s *Service) VoidUniqueCode(ctx context.Context, code string, actorID uint64, reason string) (*model.UniqueCode, error) {
+	var out *model.UniqueCode
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var c model.UniqueCode
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("code = ?", code).First(&c).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%s: unique code", errcode.NotFound)
+			}
+			return err
+		}
+		if c.Status == model.CodeSigned {
+			return fmt.Errorf("%s: signed cannot void", errcode.StateInvalid)
+		}
+		if err := domain.CanTransit(c.Status, model.CodeVoided); err != nil {
+			return err
+		}
+		switch c.Status {
+		case model.CodeInStock:
+			if err := adjustStock(tx, c.WarehouseID, c.MaterialID, -1, "code_void", code, code); err != nil {
+				return err
+			}
+		case model.CodeLocked:
+			ok, err := tryConsumeLockedStock(tx, c.WarehouseID, c.MaterialID, 1, "code_void:"+code, code)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				// lock book missing: best-effort qty decrement, then still void
+				_ = adjustStock(tx, c.WarehouseID, c.MaterialID, -1, "code_void", code, code)
+			}
+		}
+		c.Status = model.CodeVoided
+		if err := tx.Save(&c).Error; err != nil {
+			return err
+		}
+		_ = reason
+		_ = actorID
+		out = &c
+		return nil
+	})
+	return out, err
 }
 
 func (s *Service) ListStocks(ctx context.Context, warehouseID string) ([]model.StockBalance, error) {

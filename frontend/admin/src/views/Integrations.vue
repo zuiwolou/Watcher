@@ -25,10 +25,18 @@
             </el-form-item>
           </template>
           <template v-else>
-            <el-form-item label="落盘目录"><el-input v-model="sftp.path" placeholder="tmp/sftp-drop" /></el-form-item>
-            <el-form-item label="Host（预留）"><el-input v-model="sftp.host" /></el-form-item>
+            <el-form-item label="Host">
+              <el-input v-model="sftp.host" placeholder="空=本地落盘；填写后走真 SFTP" />
+            </el-form-item>
+            <el-form-item label="Port"><el-input-number v-model="sftp.port" :min="1" :max="65535" /></el-form-item>
             <el-form-item label="Username"><el-input v-model="sftp.username" /></el-form-item>
+            <el-form-item label="Password"><el-input v-model="sftp.password" type="password" show-password /></el-form-item>
+            <el-form-item label="远程目录"><el-input v-model="sftp.path" placeholder="tmp/sftp-drop 或 /upload/watcher" /></el-form-item>
+            <el-form-item label="超时秒"><el-input-number v-model="sftp.timeoutSec" :min="3" :max="120" /></el-form-item>
           </template>
+          <el-form-item label="字段映射">
+            <el-input v-model="fieldMapText" type="textarea" :rows="3" placeholder='内部键→监管键，例 {"alarmId":"alarm_id","warehouseId":"wh_code"}' />
+          </el-form-item>
           <el-button type="primary" @click="saveCfg">保存配置</el-button>
           <el-button @click="loadCfg">刷新</el-button>
         </el-form>
@@ -94,13 +102,17 @@ const tab = ref('cfg')
 const cfgs = ref([])
 const form = reactive({ id: 0, code: 'openapi', name: '监管 OpenAPI', enabled: false })
 const oa = reactive({ endpoint: '', method: 'POST', timeoutSec: 10, headersText: '{}' })
-const sftp = reactive({ path: 'tmp/sftp-drop', host: '', username: '' })
+const sftp = reactive({ path: 'tmp/sftp-drop', host: '', port: 22, username: '', password: '', timeoutSec: 15 })
+const fieldMapText = ref('{}')
 const outbox = ref([])
 const obStatus = ref('')
 const obChannel = ref('')
 
 function parseHeaders() {
   try { return JSON.parse(oa.headersText || '{}') } catch { return {} }
+}
+function parseFieldMap() {
+  try { return JSON.parse(fieldMapText.value || '{}') } catch { return {} }
 }
 
 async function loadCfg() {
@@ -116,10 +128,14 @@ function editCfg(row) {
   form.enabled = !!row.Enabled
   let cfg = {}
   try { cfg = JSON.parse(row.ConfigJSON || '{}') } catch { cfg = {} }
+  fieldMapText.value = JSON.stringify(cfg.fieldMap || {}, null, 2)
   if (row.Code === 'sftp') {
     sftp.path = cfg.path || 'tmp/sftp-drop'
     sftp.host = cfg.host || ''
+    sftp.port = cfg.port || 22
     sftp.username = cfg.username || ''
+    sftp.password = cfg.password || ''
+    sftp.timeoutSec = cfg.timeoutSec || 15
   } else {
     oa.endpoint = cfg.endpoint || ''
     oa.method = cfg.method || 'POST'
@@ -131,10 +147,15 @@ function editCfg(row) {
 async function saveCfg() {
   let configJson = {}
   if (form.code === 'sftp') {
-    configJson = { path: sftp.path, host: sftp.host, username: sftp.username }
+    configJson = {
+      path: sftp.path, host: sftp.host, port: sftp.port,
+      username: sftp.username, password: sftp.password, timeoutSec: sftp.timeoutSec,
+      fieldMap: parseFieldMap()
+    }
   } else {
     configJson = {
-      endpoint: oa.endpoint, method: oa.method, timeoutSec: oa.timeoutSec, headers: parseHeaders()
+      endpoint: oa.endpoint, method: oa.method, timeoutSec: oa.timeoutSec,
+      headers: parseHeaders(), fieldMap: parseFieldMap()
     }
   }
   await http.put('/integrations', {

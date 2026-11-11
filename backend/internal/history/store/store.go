@@ -113,7 +113,23 @@ func (s *Store) QueryTrack(ctx context.Context, warehouseID, deviceID string, fr
 
 func (s *Store) SaveAlarm(ctx context.Context, alarmID, status string, payload any, msgID string) error {
 	b, _ := json.Marshal(payload)
+	if msgID == "" {
+		msgID = alarmID + ":" + status + ":" + time.Now().Format("20060102150405.000")
+	}
 	return s.db.WithContext(ctx).Create(&AlarmSnap{
 		AlarmID: alarmID, Status: status, Payload: string(b), Ts: time.Now(), MsgID: msgID,
 	}).Error
+}
+
+func (s *Store) QueryAlarms(ctx context.Context, alarmID string, from, to time.Time, limit int) ([]AlarmSnap, error) {
+	if limit <= 0 || limit > 2000 {
+		limit = 500
+	}
+	q := s.db.WithContext(ctx).Where("ts BETWEEN ? AND ?", from, to)
+	if alarmID != "" {
+		q = q.Where("alarm_id = ?", alarmID)
+	}
+	var list []AlarmSnap
+	err := q.Order("ts desc").Limit(limit).Find(&list).Error
+	return list, err
 }

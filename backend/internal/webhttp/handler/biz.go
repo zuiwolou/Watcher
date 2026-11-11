@@ -65,6 +65,64 @@ func (h *BizHandler) ListMaterials(c *gin.Context) {
 	response.Page(c, list, page, size, total)
 }
 
+func (h *BizHandler) UpdateMaterial(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	var req struct {
+		Name      string `json:"name"`
+		WasteCode string `json:"wasteCode"`
+		Category  string `json:"category"`
+		Unit      string `json:"unit"`
+		Spec      string `json:"spec"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, http.StatusBadRequest, errcode.ValidationError, err.Error())
+		return
+	}
+	m, err := h.biz.UpdateMaterial(c.Request.Context(), id, bizsvc.CreateMaterialInput{
+		Name: req.Name, WasteCode: req.WasteCode, Category: req.Category, Unit: req.Unit, Spec: req.Spec,
+	})
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	writeAudit(c, h.db, "material.update", "material", strconv.FormatUint(m.ID, 10), gin.H{"name": m.Name})
+	response.OK(c, m)
+}
+
+func (h *BizHandler) ListUniqueCodes(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	list, total, err := h.biz.ListUniqueCodes(c.Request.Context(), c.Query("warehouseId"), c.Query("status"), c.Query("q"), page, size)
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	response.Page(c, list, page, size, total)
+}
+
+func (h *BizHandler) ExportUniqueCodesCSV(c *gin.Context) {
+	list, _, err := h.biz.ListUniqueCodes(c.Request.Context(), c.Query("warehouseId"), c.Query("status"), c.Query("q"), 1, 10000)
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", "attachment; filename=unique-codes.csv")
+	var b strings.Builder
+	b.WriteString("\ufeffcode,materialId,warehouseId,status\n")
+	for _, row := range list {
+		b.WriteString(row.Code)
+		b.WriteByte(',')
+		b.WriteString(strconv.FormatUint(row.MaterialID, 10))
+		b.WriteByte(',')
+		b.WriteString(row.WarehouseID)
+		b.WriteByte(',')
+		b.WriteString(row.Status)
+		b.WriteByte('\n')
+	}
+	c.String(http.StatusOK, b.String())
+}
+
 func (h *BizHandler) CreateInbound(c *gin.Context) {
 	var req struct {
 		WarehouseID string  `json:"warehouseId" binding:"required"`
@@ -220,6 +278,20 @@ func (h *BizHandler) GetUniqueCode(c *gin.Context) {
 		mapBizErr(c, err)
 		return
 	}
+	response.OK(c, code)
+}
+
+func (h *BizHandler) VoidUniqueCode(c *gin.Context) {
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	code, err := h.biz.VoidUniqueCode(c.Request.Context(), c.Param("code"), mustUserID(c), req.Reason)
+	if err != nil {
+		mapBizErr(c, err)
+		return
+	}
+	writeAudit(c, h.db, "code.void", "unique_code", c.Param("code"), gin.H{"reason": req.Reason})
 	response.OK(c, code)
 }
 

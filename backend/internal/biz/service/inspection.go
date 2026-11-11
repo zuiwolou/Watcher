@@ -9,8 +9,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"watcher/backend/pkg/errcode"
 	"watcher/backend/internal/biz/internal/model"
+	"watcher/backend/pkg/bus"
+	"watcher/backend/pkg/errcode"
 )
 
 func (s *Service) CreateInspectionPlan(ctx context.Context, name, cron string) (*model.InspectionPlan, error) {
@@ -21,8 +22,8 @@ func (s *Service) CreateInspectionPlan(ctx context.Context, name, cron string) (
 	return p, nil
 }
 
-func (s *Service) CreateInspectionRoute(ctx context.Context, planID uint64, name string) (*model.InspectionRoute, error) {
-	r := &model.InspectionRoute{PlanID: planID, Name: name}
+func (s *Service) CreateInspectionRoute(ctx context.Context, planID uint64, name string, forceOrder bool) (*model.InspectionRoute, error) {
+	r := &model.InspectionRoute{PlanID: planID, Name: name, ForceOrder: forceOrder}
 	if err := s.db.WithContext(ctx).Create(r).Error; err != nil {
 		return nil, err
 	}
@@ -98,6 +99,13 @@ func (s *Service) InspectionCheckin(ctx context.Context, in InspectionCheckinInp
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&task, in.TaskID).Error; err != nil {
 			return err
 		}
+		if task.Status == model.InspCompleted {
+			return fmt.Errorf("%s: task already completed", errcode.StateInvalid)
+		}
+		var route model.InspectionRoute
+		if err := tx.First(&route, task.RouteID).Error; err != nil {
+			return err
+		}
 		var point model.InspectionPoint
 		if err := tx.First(&point, in.PointID).Error; err != nil {
 			return err
@@ -105,10 +113,50 @@ func (s *Service) InspectionCheckin(ctx context.Context, in InspectionCheckinInp
 		if point.RouteID != task.RouteID {
 			return fmt.Errorf("%s: point not in route", errcode.StateInvalid)
 		}
+		// 同一点禁止重复打卡
+		var dup int64
+		if err := tx.Model(&model.InspectionCheckin{}).Where("task_id = ? AND point_id = ?", task.ID, point.ID).Count(&dup).Error; err != nil {
+			return err
+		}
+		if dup > 0 {
+			return fmt.Errorf("%s: point already checked in", errcode.StateInvalid)
+		}
+		// 强制点序：必须按 seq 打下一个未完成点
+		if route.ForceOrder {
+			var points []model.InspectionPoint
+			if err := tx.Where("route_id = ?", task.RouteID).Order("seq asc, id asc").Find(&points).Error; err != nil {
+				return err
+			}
+			var doneIDs []uint64
+			if err := tx.Model(&model.InspectionCheckin{}).Where("task_id = ?", task.ID).Pluck("point_id", &doneIDs).Error; err != nil {
+				return err
+			}
+			done := map[uint64]struct{}{}
+			for _, id := range doneIDs {
+				done[id] = struct{}{}
+			}
+			var next *model.InspectionPoint
+			for i := range points {
+				if _, ok := done[points[i].ID]; !ok {
+					next = &points[i]
+					break
+				}
+			}
+			if next == nil {
+				return fmt.Errorf("%s: all points already done", errcode.StateInvalid)
+			}
+			if next.ID != point.ID {
+				return fmt.Errorf("%s: must check in point seq=%d first", errcode.StateInvalid, next.Seq)
+			}
+		}
 		if point.RequirePhoto && in.PhotoKey == "" {
 			return fmt.Errorf("%s: photo required", errcode.ValidationError)
 		}
-		if in.Lat != nil && in.Lng != nil && point.RadiusM > 0 {
+		// 有半径时定位必填，不可跳过半径校验
+		if point.RadiusM > 0 {
+			if in.Lat == nil || in.Lng == nil {
+				return fmt.Errorf("%s: lat/lng required for radius check", errcode.ValidationError)
+			}
 			d := haversineM(point.Lat, point.Lng, *in.Lat, *in.Lng)
 			if d > point.RadiusM {
 				return fmt.Errorf("%s: out of point radius", errcode.StateInvalid)
@@ -134,7 +182,14 @@ func (s *Service) InspectionCheckin(ctx context.Context, in InspectionCheckinInp
 				Title: fmt.Sprintf("巡检异常: %s", point.Name), Status: model.AlarmRaised,
 				RaisedAt: time.Now(), DetailJSON: in.Remark,
 			}
-			_ = tx.Create(a)
+			if err := tx.Create(a).Error; err != nil {
+				return err
+			}
+			if err := s.enqueueBizOutbox(tx, "alarm.raised", "alarm", fmt.Sprintf("%d", a.ID), map[string]any{
+				"alarmId": a.ID, "ruleCode": a.RuleCode, "title": a.Title, "taskId": task.ID, "pointId": point.ID,
+			}); err != nil {
+				return err
+			}
 			alm = a
 		}
 		// complete if all points have checkin
@@ -154,7 +209,15 @@ func (s *Service) InspectionCheckin(ctx context.Context, in InspectionCheckinInp
 		ck = rec
 		return nil
 	})
-	return ck, alm, err
+	if err != nil {
+		return nil, nil, err
+	}
+	if alm != nil {
+		s.publish(bus.TopicAlarm, "svc-biz", map[string]any{
+			"alarmId": alm.ID, "ruleCode": alm.RuleCode, "title": alm.Title, "level": alm.Level,
+		})
+	}
+	return ck, alm, nil
 }
 
 func haversineM(lat1, lng1, lat2, lng2 float64) float64 {

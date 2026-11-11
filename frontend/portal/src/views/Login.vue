@@ -5,6 +5,12 @@
       <el-form @submit.prevent="login">
         <el-form-item label="账号"><el-input v-model="username" autocomplete="username" /></el-form-item>
         <el-form-item label="密码"><el-input v-model="password" type="password" autocomplete="current-password" show-password /></el-form-item>
+        <el-form-item label="登录方式">
+          <el-radio-group v-model="mode">
+            <el-radio value="local">本地账号</el-radio>
+            <el-radio value="ldap">LDAP 域账号</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-button type="primary" native-type="submit" style="width:100%" :loading="loading">登录</el-button>
       </el-form>
     </el-card>
@@ -20,6 +26,7 @@ import { saveSession } from '../auth'
 const router = useRouter()
 const username = ref('')
 const password = ref('')
+const mode = ref('local')
 const loading = ref(false)
 
 async function login() {
@@ -28,7 +35,7 @@ async function login() {
     const data = await http.post('/auth/login', {
       username: username.value,
       password: password.value,
-      mode: 'local'
+      mode: mode.value
     })
     const clients = data.clients || []
     if (clients.length && !clients.includes('portal')) {
@@ -38,6 +45,8 @@ async function login() {
     saveSession(data)
     if (data.mustChangePassword) router.replace('/change-password')
     else router.replace('/')
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || e.message || '登录失败')
   } finally {
     loading.value = false
   }

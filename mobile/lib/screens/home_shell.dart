@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../services/outbox.dart';
 import '../services/push_service.dart';
+import '../services/realtime_service.dart';
 import '../services/session.dart';
 import 'execute/execute_hub.dart';
 import 'tabs/alarms_tab.dart';
@@ -18,6 +21,8 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int idx = 0;
   List<String> perms = [];
+  int alarmBadge = 0;
+  StreamSubscription<int>? _badgeSub;
 
   @override
   void initState() {
@@ -25,6 +30,16 @@ class _HomeShellState extends State<HomeShell> {
     Session.permissions().then((p) => setState(() => perms = p));
     OutboxService.instance.startAutoFlush();
     PushService.instance.startAlarmPolling();
+    RealtimeService.instance.start();
+    _badgeSub = RealtimeService.instance.alarmBadgeStream.listen((n) {
+      if (mounted) setState(() => alarmBadge = n);
+    });
+  }
+
+  @override
+  void dispose() {
+    _badgeSub?.cancel();
+    super.dispose();
   }
 
   bool has(String p) => perms.contains(p);
@@ -41,8 +56,8 @@ class _HomeShellState extends State<HomeShell> {
     final tabs = <Widget>[];
     final items = <BottomNavigationBarItem>[];
 
-    // 首页
     tabs.add(HomeTab(
+      alarmBadge: alarmBadge,
       onOpenAlarms: () {
         final i = items.indexWhere((e) => e.label == '告警');
         if (i >= 0) setState(() => idx = i);
@@ -60,7 +75,14 @@ class _HomeShellState extends State<HomeShell> {
 
     if (has('alarm:view')) {
       tabs.add(const AlarmsTab());
-      items.add(const BottomNavigationBarItem(icon: Icon(Icons.warning_amber), label: '告警'));
+      items.add(BottomNavigationBarItem(
+        icon: Badge(
+          isLabelVisible: alarmBadge > 0,
+          label: Text('$alarmBadge'),
+          child: const Icon(Icons.warning_amber),
+        ),
+        label: '告警',
+      ));
     }
     if (has('monitor:view')) {
       tabs.add(const MonitorTab());

@@ -217,3 +217,25 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		"clients": c.MustGet(middleware.CtxClients),
 	})
 }
+
+// Logout revokes the presented refresh token (and optionally all of the user's tokens).
+func (h *AuthHandler) Logout(c *gin.Context) {
+	var req struct {
+		RefreshToken string `json:"refreshToken"`
+		All          bool   `json:"all"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	uidStr, _ := c.Get(middleware.CtxUserID)
+	uid, _ := strconv.ParseUint(uidStr.(string), 10, 64)
+	if req.All {
+		_ = h.db.Model(&iam.RefreshToken{}).Where("user_id = ?", uid).Update("revoked", true)
+	} else if req.RefreshToken != "" {
+		sum := sha256.Sum256([]byte(req.RefreshToken))
+		hash := hex.EncodeToString(sum[:])
+		_ = h.db.Model(&iam.RefreshToken{}).Where("token_hash = ? AND user_id = ?", hash, uid).Update("revoked", true)
+	} else {
+		_ = h.db.Model(&iam.RefreshToken{}).Where("user_id = ?", uid).Update("revoked", true)
+	}
+	iam.WriteAudit(h.db, uid, "auth.logout", "user", uidStr.(string), c.GetHeader("X-Client"), c.ClientIP(), nil)
+	response.OK(c, gin.H{"ok": true})
+}

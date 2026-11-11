@@ -349,9 +349,12 @@ CREATE TABLE IF NOT EXISTS `inventory_lines` (
   `scanned` TINYINT(1) NOT NULL DEFAULT 0,
   `scanned_at` DATETIME(3) NULL,
   `operator_id` BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  `diff_type` VARCHAR(16) NOT NULL DEFAULT '',
+  `note` VARCHAR(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
   KEY `idx_inventory_lines_task_id` (`task_id`),
-  KEY `idx_inventory_lines_unique_code` (`unique_code`)
+  KEY `idx_inventory_lines_unique_code` (`unique_code`),
+  KEY `idx_inventory_lines_diff_type` (`diff_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `approval_templates` (
@@ -426,6 +429,7 @@ CREATE TABLE IF NOT EXISTS `inspection_routes` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `plan_id` BIGINT UNSIGNED NOT NULL DEFAULT 0,
   `name` VARCHAR(128) NOT NULL DEFAULT '',
+  `force_order` TINYINT(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
   KEY `idx_inspection_routes_plan_id` (`plan_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -579,6 +583,18 @@ CREATE TABLE IF NOT EXISTS `integration_configs` (
   `updated_at` DATETIME(3) NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_integration_configs_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `open_credentials` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `client_id` VARCHAR(64) NOT NULL DEFAULT '',
+  `secret_hash` VARCHAR(255) NOT NULL DEFAULT '',
+  `name` VARCHAR(128) NOT NULL DEFAULT '',
+  `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NULL,
+  `updated_at` DATETIME(3) NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_open_credentials_client_id` (`client_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `devices` (

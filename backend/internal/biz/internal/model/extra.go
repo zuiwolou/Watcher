@@ -24,6 +24,12 @@ type InventoryTask struct {
 
 func (InventoryTask) TableName() string { return "inventory_tasks" }
 
+const (
+	DiffMatched = "matched"
+	DiffMissing = "missing"
+	DiffSurplus = "surplus"
+)
+
 type InventoryLine struct {
 	ID         uint64 `gorm:"primaryKey"`
 	TaskID     uint64 `gorm:"index"`
@@ -32,6 +38,8 @@ type InventoryLine struct {
 	Scanned    bool
 	ScannedAt  *time.Time
 	OperatorID uint64
+	DiffType   string `gorm:"size:16;index"` // matched|missing|surplus（过账后填写）
+	Note       string `gorm:"size:255"`
 }
 
 func (InventoryLine) TableName() string { return "inventory_lines" }
@@ -127,9 +135,10 @@ type InspectionPlan struct {
 func (InspectionPlan) TableName() string { return "inspection_plans" }
 
 type InspectionRoute struct {
-	ID     uint64 `gorm:"primaryKey"`
-	PlanID uint64 `gorm:"index"`
-	Name   string `gorm:"size:128"`
+	ID         uint64 `gorm:"primaryKey"`
+	PlanID     uint64 `gorm:"index"`
+	Name       string `gorm:"size:128"`
+	ForceOrder bool   `gorm:"default:true"` // 强制按 seq 依次打卡
 }
 
 func (InspectionRoute) TableName() string { return "inspection_routes" }
@@ -240,6 +249,19 @@ type IntegrationConfig struct {
 }
 
 func (IntegrationConfig) TableName() string { return "integration_configs" }
+
+// OpenCredential 监管入站独立凭证（与业务 JWT 隔离）。
+type OpenCredential struct {
+	ID         uint64 `gorm:"primaryKey"`
+	ClientID   string `gorm:"size:64;uniqueIndex"`
+	SecretHash string `gorm:"size:255"`
+	Name       string `gorm:"size:128"`
+	Enabled    bool   `gorm:"default:true"`
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+func (OpenCredential) TableName() string { return "open_credentials" }
 
 // --- devices ---
 

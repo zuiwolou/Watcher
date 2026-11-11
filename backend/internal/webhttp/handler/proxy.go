@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,8 +32,13 @@ func HistoryProxy(historyBase, path string) gin.HandlerFunc {
 		}
 	}
 	proxy := httputil.NewSingleHostReverseProxy(u)
+	token := os.Getenv("WATCHER_INTERNAL_TOKEN")
+	if token == "" {
+		token = "dev-internal-token"
+	}
 	return func(c *gin.Context) {
 		c.Request.URL.Path = path
+		c.Request.Header.Set("X-Internal-Token", token)
 		proxy.ServeHTTP(c.Writer, c.Request)
 	}
 }

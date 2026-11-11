@@ -12,10 +12,11 @@ info:
     - 幂等：执行类 body `clientRequestId` 或头 `X-Idempotency-Key`
     - 本文件以 `backend/cmd/webhttp/main.go` 注册表为准
 
+    **演示监管凭证**：`open-demo` / `OpenDemo@123`（Basic 或 X-Open-Client-Id/Secret）
+
     **已知未实现（见 docs/plan/缺口评估与迭代计划.md）**
-    - 监管入站 `/api/v1/open/*`
-    - 唯一码作废、物资 PUT、logout、导出
-    - 盘点过账差异调账（路由已有，语义为 MVP 骨架）
+    - 监管字段映射配置化、真 SFTP
+    - 盘点过账差异调账已实现（missing→void+扣库存；surplus 仅记录）
 servers:
   - url: http://127.0.0.1:8080
     description: 本地 webhttp
@@ -141,6 +142,96 @@ paths:
       responses:
         "200":
           description: OK
+
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: 登出并吊销 Refresh Token
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClient"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken: { type: string }
+                all: { type: boolean }
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/open/materials:
+    get:
+      tags: [openapi]
+      summary: 监管入站-物资列表（独立凭证）
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/open/stocks:
+    get:
+      tags: [openapi]
+      summary: 监管入站-库存快照
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/open/alarms:
+    get:
+      tags: [openapi]
+      summary: 监管入站-告警查询
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/open/unique-codes:
+    get:
+      tags: [openapi]
+      summary: 监管入站-唯一码台账
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/materials/{id}:
+    put:
+      tags: [materials]
+      summary: 更新物资
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/PathID"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/unique-codes:
+    get:
+      tags: [materials]
+      summary: 唯一码列表（筛选）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/unique-codes/export:
+    get:
+      tags: [materials]
+      summary: 导出唯一码 CSV
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+      responses:
+        "200":
+          description: text/csv
 
   /api/v1/me:
     get:
@@ -459,6 +550,69 @@ paths:
         "200":
           description: OK
 
+  /api/v1/unique-codes/{code}/void:
+    post:
+      tags: [materials]
+      summary: 作废唯一码（已签收禁止；在库/锁定会扣库存）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - in: path
+          name: code
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/v1/history/alarms:
+    get:
+      tags: [monitor]
+      summary: 告警历史快照（反代 history；MVP 按表保留、清理下迭代）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/XClientAny"
+        - in: query
+          name: alarmId
+          schema: { type: string }
+        - in: query
+          name: from
+          schema: { type: string, format: date-time }
+        - in: query
+          name: to
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: OK
+
+  /internal/geofence/evaluate:
+    post:
+      tags: [system]
+      summary: 内部定位围栏评估（需 X-Internal-Token）
+      parameters:
+        - $ref: "#/components/parameters/InternalToken"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [warehouseId, lat, lng]
+              properties:
+                warehouseId: { type: string }
+                deviceId: { type: string }
+                lat: { type: number }
+                lng: { type: number }
+      responses:
+        "200":
+          description: OK
+
   /api/v1/inbound/orders:
     get:
       tags: [inbound]
@@ -689,7 +843,7 @@ paths:
   /api/v1/inventory/tasks/{id}/post:
     post:
       tags: [inventory]
-      summary: 盘点过账（MVP 仅改状态；差异调账见缺口计划 BE-01）
+      summary: 盘点过账（missing→void+扣库存；surplus 仅记差异行）
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/XClientAny"

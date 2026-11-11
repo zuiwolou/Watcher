@@ -14,6 +14,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final user = TextEditingController();
   final pass = TextEditingController();
+  String mode = 'local';
   String? err;
   bool loading = false;
 
@@ -26,7 +27,7 @@ class _LoginPageState extends State<LoginPage> {
       final data = await Api.post('/auth/login', {
         'username': user.text.trim(),
         'password': pass.text,
-        'mode': 'local',
+        'mode': mode,
       }, auth: false);
       final clients = (data['clients'] as List?)?.map((e) => '$e').toList() ?? [];
       if (clients.isNotEmpty && !clients.contains('app')) {
@@ -59,6 +60,15 @@ class _LoginPageState extends State<LoginPage> {
             const SizedBox(height: 24),
             TextField(controller: user, decoration: const InputDecoration(labelText: '账号')),
             TextField(controller: pass, obscureText: true, decoration: const InputDecoration(labelText: '密码')),
+            const SizedBox(height: 8),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'local', label: Text('本地')),
+                ButtonSegment(value: 'ldap', label: Text('LDAP')),
+              ],
+              selected: {mode},
+              onSelectionChanged: (s) => setState(() => mode = s.first),
+            ),
             if (err != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(err!, style: const TextStyle(color: Colors.red))),
             const SizedBox(height: 16),
             SizedBox(

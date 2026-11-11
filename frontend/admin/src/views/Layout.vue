@@ -18,6 +18,7 @@
         <el-menu-item v-if="has('alarm:view')" index="/alarms">告警</el-menu-item>
         <el-menu-item v-if="has('threshold:edit')" index="/thresholds">阈值</el-menu-item>
         <el-menu-item v-if="has('geofence:view')" index="/geofences">地图围栏</el-menu-item>
+        <el-menu-item v-if="has('device:edit')" index="/devices">设备台账</el-menu-item>
         <el-menu-item v-if="has('monitor:view')" index="/history">历史</el-menu-item>
         <el-menu-item v-if="has('mqtt:schema:edit')" index="/mqtt-schema">MQTT Schema</el-menu-item>
         <el-menu-item v-if="has('openapi:config')" index="/integrations">监管对接</el-menu-item>
@@ -36,12 +37,18 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { hasPerm, clearSession } from '../auth'
+import http from '../api'
 const router = useRouter()
 const user = computed(() => {
   try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} }
 })
 function has(p) { return hasPerm(p) }
-function logout() { clearSession(); router.push('/login') }
+async function logout() {
+  const rt = localStorage.getItem('refreshToken')
+  try { await http.post('/auth/logout', { refreshToken: rt }) } catch (_) { /* ignore */ }
+  clearSession()
+  router.push('/login')
+}
 </script>
 <style scoped>
 .aside { background:#102a43; }

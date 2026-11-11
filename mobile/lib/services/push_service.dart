@@ -27,7 +27,10 @@ class PushService {
     await _plugin.initialize(
       const InitializationSettings(android: android, iOS: ios),
       onDidReceiveNotificationResponse: (resp) {
-        // payload can route to alarm detail later
+        // Payload is alarm summary; UI should open Alarms tab via app lifecycle hooks.
+        // Stored for debugging / future deep-link router.
+        // ignore: avoid_print
+        print('notification tap: ${resp.payload}');
       },
     );
     if (Platform.isAndroid) {

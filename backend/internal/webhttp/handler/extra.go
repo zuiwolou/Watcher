@@ -266,14 +266,19 @@ func (h *BizHandler) ListInspPlans(c *gin.Context) {
 
 func (h *BizHandler) CreateInspRoute(c *gin.Context) {
 	var req struct {
-		PlanID uint64 `json:"planId" binding:"required"`
-		Name   string `json:"name" binding:"required"`
+		PlanID     uint64 `json:"planId" binding:"required"`
+		Name       string `json:"name" binding:"required"`
+		ForceOrder *bool  `json:"forceOrder"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, http.StatusBadRequest, errcode.ValidationError, err.Error())
 		return
 	}
-	r, err := h.biz.CreateInspectionRoute(c.Request.Context(), req.PlanID, req.Name)
+	force := true
+	if req.ForceOrder != nil {
+		force = *req.ForceOrder
+	}
+	r, err := h.biz.CreateInspectionRoute(c.Request.Context(), req.PlanID, req.Name, force)
 	if err != nil {
 		mapBizErr(c, err)
 		return
@@ -474,8 +479,9 @@ func (h *BizHandler) UpsertGeofence(c *gin.Context) {
 			Lng     float64 `json:"lng"`
 			RadiusM float64 `json:"radiusM"`
 		} `json:"circle"`
-		HysteresisM float64 `json:"hysteresisM"`
-		Enabled     *bool   `json:"enabled"`
+		HysteresisM  float64 `json:"hysteresisM"`
+		ScheduleJSON string  `json:"scheduleJson"`
+		Enabled      *bool   `json:"enabled"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, http.StatusBadRequest, errcode.ValidationError, err.Error())
@@ -494,7 +500,7 @@ func (h *BizHandler) UpsertGeofence(c *gin.Context) {
 	if req.Enabled != nil {
 		en = *req.Enabled
 	}
-	g, err := h.biz.UpsertGeofence(c.Request.Context(), req.ID, req.WarehouseID, req.Name, shape, geo, req.HysteresisM, en)
+	g, err := h.biz.UpsertGeofence(c.Request.Context(), req.ID, req.WarehouseID, req.Name, shape, geo, req.HysteresisM, en, req.ScheduleJSON)
 	if err != nil {
 		mapBizErr(c, err)
 		return

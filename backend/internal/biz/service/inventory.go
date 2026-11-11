@@ -8,8 +8,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"watcher/backend/pkg/errcode"
+	"watcher/backend/internal/biz/internal/domain"
 	"watcher/backend/internal/biz/internal/model"
+	"watcher/backend/pkg/errcode"
 )
 
 func (s *Service) CreateInventoryTask(ctx context.Context, name, warehouseID, scopeJSON string, createdBy uint64) (*model.InventoryTask, error) {
@@ -96,17 +97,91 @@ func (s *Service) SubmitInventory(ctx context.Context, taskID uint64) error {
 		Update("status", model.InvSubmitted).Error
 }
 
-// PostInventory marks task posted. Difference posting against book stock is recorded as ledger note;
-// for MVP: ensure all in-stock codes in warehouse not scanned could be reported; we only flip status.
+// PostInventory posts inventory differences against book stock (in_stock in warehouse).
+// Missing codes: void + stock -1. Surplus scanned codes: recorded only (no stock increase).
 func (s *Service) PostInventory(ctx context.Context, taskID uint64) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var task model.InventoryTask
-		if err := tx.First(&task, taskID).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&task, taskID).Error; err != nil {
 			return err
 		}
 		if task.Status != model.InvSubmitted {
 			return fmt.Errorf("%s: expect submitted", errcode.StateInvalid)
 		}
+
+		var book []model.UniqueCode
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("warehouse_id = ? AND status = ?", task.WarehouseID, model.CodeInStock).
+			Find(&book).Error; err != nil {
+			return err
+		}
+		bookByCode := make(map[string]model.UniqueCode, len(book))
+		for _, c := range book {
+			bookByCode[c.Code] = c
+		}
+
+		var lines []model.InventoryLine
+		if err := tx.Where("task_id = ? AND scanned = ?", taskID, true).Find(&lines).Error; err != nil {
+			return err
+		}
+		scannedSet := make(map[string]model.InventoryLine, len(lines))
+		for _, l := range lines {
+			scannedSet[l.UniqueCode] = l
+		}
+
+		bizID := fmt.Sprintf("%d", task.ID)
+
+		// Mark matched / surplus for scanned lines
+		for code, line := range scannedSet {
+			if _, ok := bookByCode[code]; ok {
+				line.DiffType = model.DiffMatched
+				line.Note = ""
+			} else {
+				line.DiffType = model.DiffSurplus
+				line.Note = "scanned but not in_stock book; no stock increase"
+			}
+			if err := tx.Save(&line).Error; err != nil {
+				return err
+			}
+		}
+
+		// Missing: in book, not scanned → void + adjust stock
+		for code, uc := range bookByCode {
+			if _, ok := scannedSet[code]; ok {
+				continue
+			}
+			if err := domain.CanTransit(uc.Status, model.CodeVoided); err != nil {
+				return err
+			}
+			uc.Status = model.CodeVoided
+			if err := tx.Save(&uc).Error; err != nil {
+				return err
+			}
+			if err := adjustStock(tx, task.WarehouseID, uc.MaterialID, -1, "inventory_post", bizID, code); err != nil {
+				return err
+			}
+
+			var existing model.InventoryLine
+			err := tx.Where("task_id = ? AND unique_code = ?", taskID, code).First(&existing).Error
+			if err == nil {
+				existing.DiffType = model.DiffMissing
+				existing.MaterialID = uc.MaterialID
+				existing.Note = "book in_stock not scanned; voided on post"
+				if err := tx.Save(&existing).Error; err != nil {
+					return err
+				}
+			} else {
+				miss := model.InventoryLine{
+					TaskID: taskID, UniqueCode: code, MaterialID: uc.MaterialID,
+					Scanned: false, DiffType: model.DiffMissing,
+					Note: "book in_stock not scanned; voided on post",
+				}
+				if err := tx.Create(&miss).Error; err != nil {
+					return err
+				}
+			}
+		}
+
 		task.Status = model.InvPosted
 		return tx.Save(&task).Error
 	})

@@ -6,9 +6,10 @@ import '../../services/session.dart';
 import '../execute/execute_hub.dart';
 
 class HomeTab extends StatefulWidget {
-  const HomeTab({super.key, this.onOpenAlarms, this.onOpenExecute});
+  const HomeTab({super.key, this.onOpenAlarms, this.onOpenExecute, this.alarmBadge = 0});
   final VoidCallback? onOpenAlarms;
   final VoidCallback? onOpenExecute;
+  final int alarmBadge;
 
   @override
   State<HomeTab> createState() => _HomeTabState();
@@ -36,6 +37,7 @@ class _HomeTabState extends State<HomeTab> {
     } catch (_) {}
     final box = await OutboxService.instance.list();
     pendingOutbox = box.where((e) => e.status == OutboxStatus.pending || e.status == OutboxStatus.failed).length;
+    await Session.setCacheTime('cacheTimeHome');
     if (mounted) setState(() {});
   }
 
@@ -49,10 +51,18 @@ class _HomeTabState extends State<HomeTab> {
           Text('你好，${userName.isEmpty ? '现场员' : userName}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Row(children: [
-            Expanded(child: _MetricCard(title: '未确认告警', value: '$raised', onTap: widget.onOpenAlarms)),
+            Expanded(child: _MetricCard(title: '未确认告警', value: '${widget.alarmBadge > 0 ? widget.alarmBadge : raised}', onTap: widget.onOpenAlarms)),
             const SizedBox(width: 8),
             Expanded(child: _MetricCard(title: '待同步', value: '$pendingOutbox', onTap: null)),
           ]),
+          const SizedBox(height: 4),
+          FutureBuilder<String?>(
+            future: Session.cacheTime('cacheTimeHome'),
+            builder: (_, snap) => Text(
+              snap.data == null ? '连接：实时/轮询' : '缓存时间：${snap.data}',
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+          ),
           const SizedBox(height: 16),
           ListTile(
             contentPadding: EdgeInsets.zero,

@@ -3,19 +3,21 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
+	"watcher/backend/internal/history/store"
+	"watcher/backend/internal/webhttp/middleware"
 	"watcher/backend/pkg/bus"
 	"watcher/backend/pkg/canonical"
 	"watcher/backend/pkg/config"
 	"watcher/backend/pkg/database"
 	"watcher/backend/pkg/logx"
 	"watcher/backend/pkg/response"
-	"watcher/backend/internal/history/store"
 )
 
 func main() {
@@ -45,12 +47,39 @@ func main() {
 		defer cons.Stop()
 		log.Info("nsq subscribed", zap.String("topic", bus.TopicCanonical))
 	}
+	// Alarm snapshots: retain rows in hist_alarm_snapshots; TTL cleanup is a later iteration.
+	if cons, err := bus.Subscribe(lookupd, bus.TopicAlarm, "history-alarm", func(e bus.Envelope) error {
+		var payload map[string]any
+		if err := json.Unmarshal(e.Payload, &payload); err != nil {
+			return nil
+		}
+		alarmID := ""
+		if v, ok := payload["alarmId"]; ok {
+			alarmID = fmt.Sprint(v)
+		}
+		status := "raised"
+		if v, ok := payload["status"].(string); ok && v != "" {
+			status = v
+		}
+		msgID := e.MsgID
+		if msgID == "" {
+			msgID = alarmID + ":raised"
+		}
+		return st.SaveAlarm(context.Background(), alarmID, status, payload, msgID)
+	}); err != nil {
+		log.Warn("nsq alarm subscribe skip", zap.Error(err))
+	} else {
+		defer cons.Stop()
+		log.Info("nsq subscribed", zap.String("topic", bus.TopicAlarm))
+	}
 
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.GET("/healthz", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
 
-	r.POST("/internal/ingest", func(c *gin.Context) {
+	internal := r.Group("/internal")
+	internal.Use(middleware.InternalToken())
+	internal.POST("/ingest", func(c *gin.Context) {
 		var m canonical.Message
 		if err := c.ShouldBindJSON(&m); err != nil {
 			response.Fail(c, 400, "VALIDATION_ERROR", err.Error())
@@ -63,7 +92,9 @@ func main() {
 		response.OK(c, gin.H{"ok": true})
 	})
 
-	r.GET("/api/v1/history/telemetry", func(c *gin.Context) {
+	api := r.Group("/api/v1/history")
+	api.Use(middleware.InternalToken())
+	api.GET("/telemetry", func(c *gin.Context) {
 		from := parseTime(c.DefaultQuery("from", time.Now().Add(-24*time.Hour).Format(time.RFC3339)))
 		to := parseTime(c.DefaultQuery("to", time.Now().Format(time.RFC3339)))
 		list, err := st.QueryTelemetry(c.Request.Context(), c.Query("warehouseId"), c.Query("metric"), from, to, 500)
@@ -74,10 +105,21 @@ func main() {
 		response.OK(c, list)
 	})
 
-	r.GET("/api/v1/history/tracks", func(c *gin.Context) {
+	api.GET("/tracks", func(c *gin.Context) {
 		from := parseTime(c.DefaultQuery("from", time.Now().Add(-24*time.Hour).Format(time.RFC3339)))
 		to := parseTime(c.DefaultQuery("to", time.Now().Format(time.RFC3339)))
 		list, err := st.QueryTrack(c.Request.Context(), c.Query("warehouseId"), c.Query("deviceId"), from, to, 500)
+		if err != nil {
+			response.Fail(c, 500, "INTERNAL_ERROR", err.Error())
+			return
+		}
+		response.OK(c, list)
+	})
+
+	api.GET("/alarms", func(c *gin.Context) {
+		from := parseTime(c.DefaultQuery("from", time.Now().Add(-24*time.Hour).Format(time.RFC3339)))
+		to := parseTime(c.DefaultQuery("to", time.Now().Format(time.RFC3339)))
+		list, err := st.QueryAlarms(c.Request.Context(), c.Query("alarmId"), from, to, 500)
 		if err != nil {
 			response.Fail(c, 500, "INTERNAL_ERROR", err.Error())
 			return
