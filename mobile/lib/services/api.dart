@@ -2,9 +2,10 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../config/credentials.dart';
 import 'session.dart';
 
-const apiBase = String.fromEnvironment('API_BASE', defaultValue: 'http://10.0.2.2:8080/api/v1');
+const apiBase = Credentials.apiBase;
 
 class ApiException implements Exception {
   ApiException(this.code, this.message);

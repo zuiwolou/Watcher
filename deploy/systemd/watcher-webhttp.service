@@ -8,7 +8,9 @@ WorkingDirectory=/opt/watcher
 ExecStart=/opt/watcher/bin/webhttp
 Restart=on-failure
 Environment=WATCHER_ENV=prod
-# 配置默认读取 /opt/watcher/backend/configs/config.yaml
+Environment=WATCHER_INTERNAL_TOKEN=change-me-internal-token
+Environment=WATCHER_WS_ORIGINS=https://watcher.example.com
+# 工作目录 /opt/watcher；配置放 configs/config.yaml
 
 [Install]
 WantedBy=multi-user.target

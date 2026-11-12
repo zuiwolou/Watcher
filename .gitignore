@@ -23,7 +23,12 @@ coverage.out
 .env.local
 *.pem
 *.key
+*.p8
 backend/configs/config.yaml
+configs/external_credentials.yaml
+mobile/config/credentials.json
+mobile/android/app/google-services.json
+**/service-account*.json
 
 # Local agent / IDE scratch
 .workbuddy/

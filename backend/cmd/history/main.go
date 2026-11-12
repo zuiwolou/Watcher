@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +17,9 @@ import (
 	"watcher/backend/pkg/canonical"
 	"watcher/backend/pkg/config"
 	"watcher/backend/pkg/database"
+	"watcher/backend/pkg/etcdx"
 	"watcher/backend/pkg/logx"
+	"watcher/backend/pkg/metricsx"
 	"watcher/backend/pkg/response"
 )
 
@@ -73,9 +76,36 @@ func main() {
 		log.Info("nsq subscribed", zap.String("topic", bus.TopicAlarm))
 	}
 
+	retainDays := 90
+	if etcdCli, err := etcdx.Dial(); err != nil {
+		log.Warn("etcd dial", zap.Error(err))
+	} else if etcdCli != nil {
+		defer etcdCli.Close()
+		if v, err := etcdCli.GetString(context.Background(), etcdx.KeyHistoryRetainDays); err == nil && v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n > 0 {
+				retainDays = n
+				log.Info("history retain_days from etcd", zap.Int("days", retainDays))
+			}
+		}
+	}
+	go func() {
+		t := time.NewTicker(6 * time.Hour)
+		defer t.Stop()
+		for {
+			cutoff := time.Now().AddDate(0, 0, -retainDays)
+			if n, err := st.PurgeOlderThan(context.Background(), cutoff); err != nil {
+				log.Warn("history purge", zap.Error(err))
+			} else if n > 0 {
+				log.Info("history purged", zap.Int64("rows", n), zap.Time("cutoff", cutoff))
+			}
+			<-t.C
+		}
+	}()
+
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.GET("/healthz", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
+	metricsx.Register(r)
 
 	internal := r.Group("/internal")
 	internal.Use(middleware.InternalToken())

@@ -17,6 +17,7 @@ import (
 	"watcher/backend/internal/biz/internal/domain"
 	"watcher/backend/internal/biz/internal/model"
 	"watcher/backend/pkg/errcode"
+	"watcher/backend/pkg/jsid"
 )
 
 // EventPublisher is optional NSQ (or compatible) publisher for config/biz events.
@@ -27,6 +28,8 @@ type EventPublisher interface {
 type Service struct {
 	db  *gorm.DB
 	pub EventPublisher
+	// alarmSuppress 告警冷却窗口；0 则用 defaultAlarmSuppressWindow。可被 etcd 覆盖（BE-18）。
+	alarmSuppress time.Duration
 }
 
 func New(db *gorm.DB) *Service {
@@ -34,6 +37,20 @@ func New(db *gorm.DB) *Service {
 }
 
 func (s *Service) SetPublisher(p EventPublisher) { s.pub = p }
+
+// SetAlarmSuppressWindow sets geofence/threshold duplicate-alarm cooldown (BE-18).
+func (s *Service) SetAlarmSuppressWindow(d time.Duration) {
+	if d > 0 {
+		s.alarmSuppress = d
+	}
+}
+
+func (s *Service) suppressWindow() time.Duration {
+	if s != nil && s.alarmSuppress > 0 {
+		return s.alarmSuppress
+	}
+	return defaultAlarmSuppressWindow
+}
 
 func (s *Service) publish(topic, producer string, payload any) {
 	if s == nil || s.pub == nil {
@@ -145,7 +162,7 @@ func (s *Service) CreateMaterial(ctx context.Context, in CreateMaterialInput) (*
 	return m, nil
 }
 
-func (s *Service) UpdateMaterial(ctx context.Context, id uint64, in CreateMaterialInput) (*model.Material, error) {
+func (s *Service) UpdateMaterial(ctx context.Context, id jsid.ID, in CreateMaterialInput) (*model.Material, error) {
 	var m model.Material
 	if err := s.db.WithContext(ctx).First(&m, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -222,7 +239,7 @@ type CreateInboundInput struct {
 	Remark      string
 	ManifestNo  string
 	CreatedBy   uint64
-	MaterialID  uint64
+	MaterialID  jsid.ID
 	Qty         float64
 }
 
@@ -249,7 +266,7 @@ func (s *Service) CreateInboundOrder(ctx context.Context, in CreateInboundInput)
 	return order, err
 }
 
-func (s *Service) IssueCodes(ctx context.Context, orderID uint64, count int) ([]model.UniqueCode, error) {
+func (s *Service) IssueCodes(ctx context.Context, orderID jsid.ID, count int) ([]model.UniqueCode, error) {
 	if count < 1 || count > 500 {
 		return nil, fmt.Errorf("%s: count out of range", errcode.ValidationError)
 	}
@@ -291,7 +308,7 @@ func (s *Service) IssueCodes(ctx context.Context, orderID uint64, count int) ([]
 }
 
 type ConfirmInboundInput struct {
-	OrderID         uint64
+	OrderID         jsid.ID
 	UniqueCode      string
 	OperatorID      uint64
 	ClientRequestID string
@@ -385,7 +402,7 @@ func (s *Service) ConfirmInbound(ctx context.Context, in ConfirmInboundInput) (*
 }
 
 type LockOutboundInput struct {
-	OrderID         uint64
+	OrderID         jsid.ID
 	UniqueCode      string
 	OperatorID      uint64
 	ClientRequestID string
@@ -455,7 +472,7 @@ func (s *Service) LockOutbound(ctx context.Context, in LockOutboundInput) (*Conf
 }
 
 type ReceiveOutboundInput struct {
-	OrderID         uint64
+	OrderID         jsid.ID
 	UniqueCode      string
 	OperatorID      uint64
 	ClientRequestID string
@@ -550,7 +567,7 @@ func (s *Service) ReceiveOutbound(ctx context.Context, in ReceiveOutboundInput) 
 	return result, err
 }
 
-func (s *Service) CreateOutboundOrder(ctx context.Context, warehouseID string, createdBy, materialID uint64, qty float64, remark string) (*model.OutboundOrder, error) {
+func (s *Service) CreateOutboundOrder(ctx context.Context, warehouseID string, createdBy uint64, materialID jsid.ID, qty float64, remark string) (*model.OutboundOrder, error) {
 	order := &model.OutboundOrder{
 		OrderNo:     fmt.Sprintf("OUT%s", time.Now().Format("20060102150405")),
 		WarehouseID: warehouseID,
@@ -655,7 +672,7 @@ func (s *Service) ListInboundOrders(ctx context.Context, page, pageSize int) ([]
 	return list, total, err
 }
 
-func adjustStock(tx *gorm.DB, warehouseID string, materialID uint64, delta float64, bizType, bizID, uniqueCode string) error {
+func adjustStock(tx *gorm.DB, warehouseID string, materialID jsid.ID, delta float64, bizType, bizID, uniqueCode string) error {
 	var bal model.StockBalance
 	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 		Where("warehouse_id = ? AND material_id = ?", warehouseID, materialID).
@@ -681,7 +698,7 @@ func adjustStock(tx *gorm.DB, warehouseID string, materialID uint64, delta float
 	}).Error
 }
 
-func lockStock(tx *gorm.DB, warehouseID string, materialID uint64, qty float64) error {
+func lockStock(tx *gorm.DB, warehouseID string, materialID jsid.ID, qty float64) error {
 	var bal model.StockBalance
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 		Where("warehouse_id = ? AND material_id = ?", warehouseID, materialID).
@@ -697,7 +714,7 @@ func lockStock(tx *gorm.DB, warehouseID string, materialID uint64, qty float64) 
 }
 
 // consumeLockedStock 释放锁定并实扣；锁定不足时返回 STATE_INVALID 且不修改任何数据。
-func consumeLockedStock(tx *gorm.DB, warehouseID string, materialID uint64, qty float64, bizID, uniqueCode string) error {
+func consumeLockedStock(tx *gorm.DB, warehouseID string, materialID jsid.ID, qty float64, bizID, uniqueCode string) error {
 	ok, err := tryConsumeLockedStock(tx, warehouseID, materialID, qty, bizID, uniqueCode)
 	if err != nil {
 		return err
@@ -709,7 +726,7 @@ func consumeLockedStock(tx *gorm.DB, warehouseID string, materialID uint64, qty 
 }
 
 // tryConsumeLockedStock 尝试释放锁定并实扣；返回 false 表示无足够锁定量（未做修改）。
-func tryConsumeLockedStock(tx *gorm.DB, warehouseID string, materialID uint64, qty float64, bizID, uniqueCode string) (bool, error) {
+func tryConsumeLockedStock(tx *gorm.DB, warehouseID string, materialID jsid.ID, qty float64, bizID, uniqueCode string) (bool, error) {
 	var bal model.StockBalance
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 		Where("warehouse_id = ? AND material_id = ?", warehouseID, materialID).

@@ -6,9 +6,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"watcher/backend/pkg/errcode"
-	"watcher/backend/pkg/response"
 	bizsvc "watcher/backend/internal/biz/service"
+	"watcher/backend/pkg/errcode"
+	"watcher/backend/pkg/jsid"
+	"watcher/backend/pkg/response"
 )
 
 func (h *BizHandler) CreateUnit(c *gin.Context) {
@@ -43,7 +44,7 @@ func (h *BizHandler) ListUnits(c *gin.Context) {
 
 func (h *BizHandler) CreateTransportTask(c *gin.Context) {
 	var req struct {
-		OutboundOrderID uint64 `json:"outboundOrderId" binding:"required"`
+		OutboundOrderID jsid.ID `json:"outboundOrderId" binding:"required"`
 		UnitID          uint64 `json:"unitId" binding:"required"`
 		DriverUserID    uint64 `json:"driverUserId" binding:"required"`
 		WarehouseID     string `json:"warehouseId"`

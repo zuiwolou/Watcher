@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"watcher/backend/pkg/jsid"
+)
 
 // --- warehouse / material / stock ---
 
@@ -17,14 +21,14 @@ type Warehouse struct {
 func (Warehouse) TableName() string { return "warehouses" }
 
 type Material struct {
-	ID        uint64 `gorm:"primaryKey"`
-	Code      string `gorm:"size:64;uniqueIndex"`
-	Name      string `gorm:"size:128"`
-	WasteCode string `gorm:"size:64"`
-	Category  string `gorm:"size:64"`
-	Unit      string `gorm:"size:16"`
-	Spec      string `gorm:"size:128"`
-	Status    int8   `gorm:"default:1"`
+	ID        jsid.ID `gorm:"primaryKey"`
+	Code      string  `gorm:"size:64;uniqueIndex"`
+	Name      string  `gorm:"size:128"`
+	WasteCode string  `gorm:"size:64"`
+	Category  string  `gorm:"size:64"`
+	Unit      string  `gorm:"size:16"`
+	Spec      string  `gorm:"size:128"`
+	Status    int8    `gorm:"default:1"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -32,9 +36,9 @@ type Material struct {
 func (Material) TableName() string { return "materials" }
 
 type StockBalance struct {
-	ID          uint64  `gorm:"primaryKey"`
+	ID          jsid.ID `gorm:"primaryKey"`
 	WarehouseID string  `gorm:"size:64;uniqueIndex:uk_wh_mat"`
-	MaterialID  uint64  `gorm:"uniqueIndex:uk_wh_mat"`
+	MaterialID  jsid.ID `gorm:"uniqueIndex:uk_wh_mat"`
 	Qty         float64 `gorm:"type:decimal(18,4);default:0"`
 	LockedQty   float64 `gorm:"type:decimal(18,4);default:0"`
 	UpdatedAt   time.Time
@@ -43,9 +47,9 @@ type StockBalance struct {
 func (StockBalance) TableName() string { return "stock_balances" }
 
 type StockLedger struct {
-	ID           uint64  `gorm:"primaryKey"`
+	ID           jsid.ID `gorm:"primaryKey"`
 	WarehouseID  string  `gorm:"size:64;index"`
-	MaterialID   uint64  `gorm:"index"`
+	MaterialID   jsid.ID `gorm:"index"`
 	Delta        float64 `gorm:"type:decimal(18,4)"`
 	BalanceAfter float64 `gorm:"type:decimal(18,4)"`
 	BizType      string  `gorm:"size:32"`
@@ -67,13 +71,13 @@ const (
 )
 
 type UniqueCode struct {
-	ID              uint64 `gorm:"primaryKey"`
-	Code            string `gorm:"size:64;uniqueIndex"`
-	MaterialID      uint64 `gorm:"index"`
-	WarehouseID     string `gorm:"size:64;index"`
-	Status          string `gorm:"size:16;index"`
-	InboundOrderID  *uint64
-	OutboundOrderID *uint64
+	ID              jsid.ID  `gorm:"primaryKey"`
+	Code            string   `gorm:"size:64;uniqueIndex"`
+	MaterialID      jsid.ID  `gorm:"index"`
+	WarehouseID     string   `gorm:"size:64;index"`
+	Status          string   `gorm:"size:16;index"`
+	InboundOrderID  *jsid.ID
+	OutboundOrderID *jsid.ID
 	IssuedAt        *time.Time
 	StockedAt       *time.Time
 	SignedAt        *time.Time
@@ -93,12 +97,12 @@ const (
 )
 
 type InboundOrder struct {
-	ID          uint64 `gorm:"primaryKey"`
-	OrderNo     string `gorm:"size:64;uniqueIndex"`
-	WarehouseID string `gorm:"size:64;index"`
-	Status      string `gorm:"size:16;index"`
-	Remark      string `gorm:"size:255"`
-	ManifestNo  string `gorm:"size:64"`
+	ID          jsid.ID `gorm:"primaryKey"`
+	OrderNo     string  `gorm:"size:64;uniqueIndex"`
+	WarehouseID string  `gorm:"size:64;index"`
+	Status      string  `gorm:"size:16;index"`
+	Remark      string  `gorm:"size:255"`
+	ManifestNo  string  `gorm:"size:64"`
 	CreatedBy   uint64
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
@@ -107,18 +111,18 @@ type InboundOrder struct {
 func (InboundOrder) TableName() string { return "inbound_orders" }
 
 type InboundOrderItem struct {
-	ID             uint64 `gorm:"primaryKey"`
-	InboundOrderID uint64 `gorm:"index"`
-	MaterialID     uint64
+	ID             jsid.ID `gorm:"primaryKey"`
+	InboundOrderID jsid.ID `gorm:"index"`
+	MaterialID     jsid.ID
 	Qty            float64 `gorm:"type:decimal(18,4)"`
 }
 
 func (InboundOrderItem) TableName() string { return "inbound_order_items" }
 
 type InboundConfirmation struct {
-	ID              uint64 `gorm:"primaryKey"`
-	InboundOrderID  uint64 `gorm:"index"`
-	UniqueCode      string `gorm:"size:64;index"`
+	ID              jsid.ID `gorm:"primaryKey"`
+	InboundOrderID  jsid.ID `gorm:"index"`
+	UniqueCode      string  `gorm:"size:64;index"`
 	OperatorID      uint64
 	Lat             *float64
 	Lng             *float64
@@ -130,12 +134,12 @@ type InboundConfirmation struct {
 func (InboundConfirmation) TableName() string { return "inbound_confirmations" }
 
 type OutboundOrder struct {
-	ID          uint64 `gorm:"primaryKey"`
-	OrderNo     string `gorm:"size:64;uniqueIndex"`
-	WarehouseID string `gorm:"size:64;index"`
-	Status      string `gorm:"size:16;index"`
-	Remark      string `gorm:"size:255"`
-	ManifestNo  string `gorm:"size:64"`
+	ID          jsid.ID `gorm:"primaryKey"`
+	OrderNo     string  `gorm:"size:64;uniqueIndex"`
+	WarehouseID string  `gorm:"size:64;index"`
+	Status      string  `gorm:"size:16;index"`
+	Remark      string  `gorm:"size:255"`
+	ManifestNo  string  `gorm:"size:64"`
 	CreatedBy   uint64
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
@@ -144,19 +148,19 @@ type OutboundOrder struct {
 func (OutboundOrder) TableName() string { return "outbound_orders" }
 
 type OutboundOrderItem struct {
-	ID              uint64 `gorm:"primaryKey"`
-	OutboundOrderID uint64 `gorm:"index"`
-	MaterialID      uint64
+	ID              jsid.ID `gorm:"primaryKey"`
+	OutboundOrderID jsid.ID `gorm:"index"`
+	MaterialID      jsid.ID
 	Qty             float64 `gorm:"type:decimal(18,4)"`
 }
 
 func (OutboundOrderItem) TableName() string { return "outbound_order_items" }
 
 type OutboundConfirmation struct {
-	ID              uint64 `gorm:"primaryKey"`
-	OutboundOrderID uint64 `gorm:"index"`
-	UniqueCode      string `gorm:"size:64;index"`
-	Action          string `gorm:"size:16"` // lock | receive
+	ID              jsid.ID `gorm:"primaryKey"`
+	OutboundOrderID jsid.ID `gorm:"index"`
+	UniqueCode      string  `gorm:"size:64;index"`
+	Action          string  `gorm:"size:16"` // lock | receive
 	OperatorID      uint64
 	Lat             *float64
 	Lng             *float64
@@ -177,19 +181,19 @@ type IdempotencyRecord struct {
 func (IdempotencyRecord) TableName() string { return "idempotency_records" }
 
 type Alarm struct {
-	ID          uint64 `gorm:"primaryKey"`
-	WarehouseID string `gorm:"size:64;index"`
-	RuleCode    string `gorm:"size:64"`
-	Level       string `gorm:"size:16"`
-	Title       string `gorm:"size:255"`
-	Status      string `gorm:"size:16;index"` // raised|acked|closed
-	Metric      string `gorm:"size:64"`
+	ID          jsid.ID `gorm:"primaryKey"`
+	WarehouseID string  `gorm:"size:64;index"`
+	RuleCode    string  `gorm:"size:64"`
+	Level       string  `gorm:"size:16"`
+	Title       string  `gorm:"size:255"`
+	Status      string  `gorm:"size:16;index"` // raised|acked|closed
+	Metric      string  `gorm:"size:64"`
 	Value       float64
 	Threshold   float64
 	DeviceID    string `gorm:"size:64"`
 	RaisedAt    time.Time
 	AckedAt     *time.Time
-	AckedBy     *uint64
+	AckedBy     *jsid.ID
 	ClosedAt    *time.Time
 	DetailJSON  string `gorm:"type:text"`
 }
@@ -222,7 +226,7 @@ func (TransportUnit) TableName() string { return "transport_units" }
 type TransportTask struct {
 	ID              uint64 `gorm:"primaryKey"`
 	TaskNo          string `gorm:"size:64;uniqueIndex"`
-	OutboundOrderID uint64 `gorm:"index"`
+	OutboundOrderID jsid.ID `gorm:"index"`
 	UnitID          uint64 `gorm:"index"`
 	DriverUserID    uint64 `gorm:"index"`
 	WarehouseID     string `gorm:"size:64;index"`

@@ -11,8 +11,9 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"watcher/backend/pkg/errcode"
 	"watcher/backend/internal/biz/internal/model"
+	"watcher/backend/pkg/errcode"
+	"watcher/backend/pkg/jsid"
 )
 
 type ApprovalLevel struct {
@@ -51,7 +52,7 @@ func (s *Service) ListApprovalTemplates(ctx context.Context) ([]model.ApprovalTe
 	return list, err
 }
 
-func (s *Service) CreateStockAdjustment(ctx context.Context, warehouseID string, materialID uint64, delta float64, reason string, createdBy uint64) (*model.StockAdjustment, *model.ApprovalOrder, error) {
+func (s *Service) CreateStockAdjustment(ctx context.Context, warehouseID string, materialID jsid.ID, delta float64, reason string, createdBy uint64) (*model.StockAdjustment, *model.ApprovalOrder, error) {
 	var adj *model.StockAdjustment
 	var order *model.ApprovalOrder
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {

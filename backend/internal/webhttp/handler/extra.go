@@ -14,6 +14,7 @@ import (
 	bizsvc "watcher/backend/internal/biz/service"
 	"watcher/backend/internal/webhttp/middleware"
 	"watcher/backend/pkg/errcode"
+	"watcher/backend/pkg/jsid"
 	"watcher/backend/pkg/response"
 )
 
@@ -144,7 +145,7 @@ func (h *ApprovalHandler) ListTemplates(c *gin.Context) {
 func (h *ApprovalHandler) CreateAdjustment(c *gin.Context) {
 	var req struct {
 		WarehouseID string  `json:"warehouseId" binding:"required"`
-		MaterialID  uint64  `json:"materialId" binding:"required"`
+		MaterialID  jsid.ID `json:"materialId" binding:"required"`
 		Delta       float64 `json:"delta" binding:"required"`
 		Reason      string  `json:"reason"`
 	}
@@ -439,7 +440,7 @@ func (h *BizHandler) EvaluateTelemetry(c *gin.Context) {
 func (h *BizHandler) ListAlarms(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	size, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
-	list, total, err := h.biz.ListAlarms(c.Request.Context(), page, size, c.Query("status"))
+	list, total, err := h.biz.ListAlarms(c.Request.Context(), page, size, c.Query("status"), c.Query("level"))
 	if err != nil {
 		mapBizErr(c, err)
 		return

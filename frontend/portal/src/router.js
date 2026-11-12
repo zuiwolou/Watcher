@@ -13,6 +13,7 @@ import Geofence from './views/Geofence.vue'
 import InventoryReport from './views/InventoryReport.vue'
 import InspectionReport from './views/InspectionReport.vue'
 import Forbidden from './views/Forbidden.vue'
+import Profile from './views/Profile.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -32,7 +33,8 @@ const router = createRouter({
         { path: 'inspection', component: InspectionReport, meta: { perm: 'inspection:view' } },
         { path: 'monitor', component: Monitor, meta: { perm: 'monitor:view' } },
         { path: 'map', component: MapView, meta: { perm: 'track:view' } },
-        { path: 'geofences', component: Geofence, meta: { perm: 'geofence:view' } }
+        { path: 'geofences', component: Geofence, meta: { perm: 'geofence:view' } },
+        { path: 'profile', component: Profile }
       ]
     }
   ]

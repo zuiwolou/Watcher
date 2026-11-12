@@ -1,3 +1,7 @@
+import { baiduJavascriptApiAk, baiduMapAk, useBaiduMap } from '../config/credentials'
+
+export { baiduJavascriptApiAk, baiduMapAk, useBaiduMap }
+
 let loading = null
 
 export function loadLeaflet() {

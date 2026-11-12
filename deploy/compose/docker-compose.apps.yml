@@ -1,0 +1,80 @@
+# 应用进程（需先 build 镜像）。与中间件栈一起用：
+#   docker compose -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.apps.yml up -d --build
+#
+# 二进制规范目录（不跑容器时）：发布包 /opt/watcher/{bin,configs,web,sql}
+
+services:
+  webhttp:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      args: { SERVICE: webhttp }
+    image: watcher-webhttp:local
+    container_name: watcher-webhttp
+    environment:
+      WATCHER_ENV: prod
+      WATCHER_INTERNAL_TOKEN: ${WATCHER_INTERNAL_TOKEN:-dev-internal-token}
+      WATCHER_WS_ORIGINS: ${WATCHER_WS_ORIGINS:-https://localhost}
+      WATCHER_MYSQL_DSN: watcher:watcher@tcp(mysql:3306)/watcher?charset=utf8mb4&parseTime=True&loc=Local
+      WATCHER_HISTORY_URL: http://history:8082
+      WATCHER_PUSH_URL: http://push:8083
+      WATCHER_NSQD: nsqd:4150
+    ports: ["8080:8080"]
+    volumes:
+      - ../../backend/configs:/app/configs:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+    working_dir: /app
+    command: ["/app/service"]
+
+  history:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      args: { SERVICE: history }
+    image: watcher-history:local
+    environment:
+      WATCHER_ENV: prod
+      WATCHER_INTERNAL_TOKEN: ${WATCHER_INTERNAL_TOKEN:-dev-internal-token}
+      WATCHER_HISTORY_ADDR: ":8082"
+      WATCHER_NSQ_LOOKUPD: nsqlookupd:4161
+      WATCHER_MYSQL_DSN: watcher:watcher@tcp(mysql:3306)/watcher?charset=utf8mb4&parseTime=True&loc=Local
+    ports: ["8082:8082"]
+    volumes:
+      - ../../backend/configs:/app/configs:ro
+    depends_on: [mysql, nsqlookupd]
+
+  push:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      args: { SERVICE: push }
+    image: watcher-push:local
+    environment:
+      WATCHER_ENV: prod
+      WATCHER_PUSH_ADDR: ":8083"
+      WATCHER_WS_ORIGINS: ${WATCHER_WS_ORIGINS:-https://localhost}
+      WATCHER_NSQ_LOOKUPD: nsqlookupd:4161
+    ports: ["8083:8083"]
+    depends_on: [nsqlookupd]
+
+  mqtt:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      args: { SERVICE: mqtt }
+    image: watcher-mqtt:local
+    environment:
+      WATCHER_ENV: prod
+      WATCHER_INTERNAL_TOKEN: ${WATCHER_INTERNAL_TOKEN:-dev-internal-token}
+      WATCHER_MQTT_BROKER: tcp://emqx:1883
+      WATCHER_HISTORY_URL: http://history:8082/internal/ingest
+      WATCHER_WEB_EVAL_URL: http://webhttp:8080/internal/monitor/evaluate
+      WATCHER_GEO_EVAL_URL: http://webhttp:8080/internal/geofence/evaluate
+      WATCHER_NSQD: nsqd:4150
+      WATCHER_NSQLOOKUPD: nsqlookupd:4161
+      WATCHER_MYSQL_DSN: watcher:watcher@tcp(mysql:3306)/watcher?charset=utf8mb4&parseTime=True&loc=Local
+    volumes:
+      - ../../backend/configs:/app/configs:ro
+    depends_on: [emqx, webhttp, history, nsqd]

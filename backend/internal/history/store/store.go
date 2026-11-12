@@ -133,3 +133,16 @@ func (s *Store) QueryAlarms(ctx context.Context, alarmID string, from, to time.T
 	err := q.Order("ts desc").Limit(limit).Find(&list).Error
 	return list, err
 }
+
+// PurgeOlderThan deletes telemetry/location/alarm rows older than cutoff (BE-18 retain_days).
+func (s *Store) PurgeOlderThan(ctx context.Context, cutoff time.Time) (int64, error) {
+	var n int64
+	for _, model := range []any{&TelemetryRow{}, &LocationRow{}, &AlarmSnap{}} {
+		res := s.db.WithContext(ctx).Where("ts < ?", cutoff).Delete(model)
+		if res.Error != nil {
+			return n, res.Error
+		}
+		n += res.RowsAffected
+	}
+	return n, nil
+}

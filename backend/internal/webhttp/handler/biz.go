@@ -11,6 +11,7 @@ import (
 	bizsvc "watcher/backend/internal/biz/service"
 	"watcher/backend/internal/webhttp/middleware"
 	"watcher/backend/pkg/errcode"
+	"watcher/backend/pkg/jsid"
 	"watcher/backend/pkg/response"
 )
 
@@ -50,7 +51,7 @@ func (h *BizHandler) CreateMaterial(c *gin.Context) {
 		mapBizErr(c, err)
 		return
 	}
-	writeAudit(c, h.db, "material.create", "material", strconv.FormatUint(m.ID, 10), gin.H{"code": m.Code})
+	writeAudit(c, h.db, "material.create", "material", m.ID.String(), gin.H{"code": m.Code})
 	response.OK(c, m)
 }
 
@@ -78,14 +79,14 @@ func (h *BizHandler) UpdateMaterial(c *gin.Context) {
 		response.Fail(c, http.StatusBadRequest, errcode.ValidationError, err.Error())
 		return
 	}
-	m, err := h.biz.UpdateMaterial(c.Request.Context(), id, bizsvc.CreateMaterialInput{
+	m, err := h.biz.UpdateMaterial(c.Request.Context(), jsid.FromUint64(id), bizsvc.CreateMaterialInput{
 		Name: req.Name, WasteCode: req.WasteCode, Category: req.Category, Unit: req.Unit, Spec: req.Spec,
 	})
 	if err != nil {
 		mapBizErr(c, err)
 		return
 	}
-	writeAudit(c, h.db, "material.update", "material", strconv.FormatUint(m.ID, 10), gin.H{"name": m.Name})
+	writeAudit(c, h.db, "material.update", "material", m.ID.String(), gin.H{"name": m.Name})
 	response.OK(c, m)
 }
 
@@ -113,7 +114,7 @@ func (h *BizHandler) ExportUniqueCodesCSV(c *gin.Context) {
 	for _, row := range list {
 		b.WriteString(row.Code)
 		b.WriteByte(',')
-		b.WriteString(strconv.FormatUint(row.MaterialID, 10))
+		b.WriteString(row.MaterialID.String())
 		b.WriteByte(',')
 		b.WriteString(row.WarehouseID)
 		b.WriteByte(',')
@@ -126,7 +127,7 @@ func (h *BizHandler) ExportUniqueCodesCSV(c *gin.Context) {
 func (h *BizHandler) CreateInbound(c *gin.Context) {
 	var req struct {
 		WarehouseID string  `json:"warehouseId" binding:"required"`
-		MaterialID  uint64  `json:"materialId" binding:"required"`
+		MaterialID  jsid.ID `json:"materialId" binding:"required"`
 		Qty         float64 `json:"qty" binding:"required"`
 		Remark      string  `json:"remark"`
 		ManifestNo  string  `json:"manifestNo"`
@@ -171,7 +172,7 @@ func (h *BizHandler) IssueCodes(c *gin.Context) {
 		response.Fail(c, http.StatusBadRequest, errcode.ValidationError, err.Error())
 		return
 	}
-	codes, err := h.biz.IssueCodes(c.Request.Context(), id, req.Count)
+	codes, err := h.biz.IssueCodes(c.Request.Context(), jsid.FromUint64(id), req.Count)
 	if err != nil {
 		mapBizErr(c, err)
 		return
@@ -190,7 +191,7 @@ func (h *BizHandler) ConfirmInbound(c *gin.Context) {
 		req.ClientRequestID = c.GetHeader("X-Idempotency-Key")
 	}
 	res, err := h.biz.ConfirmInbound(c.Request.Context(), bizsvc.ConfirmInboundInput{
-		OrderID: id, UniqueCode: req.UniqueCode, OperatorID: mustUserID(c),
+		OrderID: jsid.FromUint64(id), UniqueCode: req.UniqueCode, OperatorID: mustUserID(c),
 		ClientRequestID: req.ClientRequestID, Lat: req.Lat, Lng: req.Lng, PhotoKey: req.PhotoObjectKey,
 	})
 	if err != nil {
@@ -215,7 +216,7 @@ func (h *BizHandler) ListOutbound(c *gin.Context) {
 func (h *BizHandler) CreateOutbound(c *gin.Context) {
 	var req struct {
 		WarehouseID string  `json:"warehouseId" binding:"required"`
-		MaterialID  uint64  `json:"materialId" binding:"required"`
+		MaterialID  jsid.ID `json:"materialId" binding:"required"`
 		Qty         float64 `json:"qty" binding:"required"`
 		Remark      string  `json:"remark"`
 	}
@@ -255,12 +256,12 @@ func (h *BizHandler) ConfirmOutbound(c *gin.Context) {
 	switch action {
 	case "receive":
 		res, err = h.biz.ReceiveOutbound(c.Request.Context(), bizsvc.ReceiveOutboundInput{
-			OrderID: id, UniqueCode: req.UniqueCode, OperatorID: mustUserID(c),
+			OrderID: jsid.FromUint64(id), UniqueCode: req.UniqueCode, OperatorID: mustUserID(c),
 			ClientRequestID: req.ClientRequestID, Lat: req.Lat, Lng: req.Lng, PhotoKey: req.PhotoObjectKey,
 		})
 	default:
 		res, err = h.biz.LockOutbound(c.Request.Context(), bizsvc.LockOutboundInput{
-			OrderID: id, UniqueCode: req.UniqueCode, OperatorID: mustUserID(c),
+			OrderID: jsid.FromUint64(id), UniqueCode: req.UniqueCode, OperatorID: mustUserID(c),
 			ClientRequestID: req.ClientRequestID, Lat: req.Lat, Lng: req.Lng, PhotoKey: req.PhotoObjectKey,
 		})
 	}

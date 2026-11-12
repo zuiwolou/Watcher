@@ -14,6 +14,7 @@ import (
 	"watcher/backend/pkg/bus"
 	"watcher/backend/pkg/canonical"
 	"watcher/backend/pkg/errcode"
+	"watcher/backend/pkg/jsid"
 )
 
 func (s *Service) CreateTransportUnit(ctx context.Context, plateNo, typ, deviceID string) (*model.TransportUnit, error) {
@@ -31,7 +32,7 @@ func (s *Service) ListTransportUnits(ctx context.Context) ([]model.TransportUnit
 }
 
 type CreateTransportTaskInput struct {
-	OutboundOrderID uint64
+	OutboundOrderID jsid.ID
 	UnitID          uint64
 	DriverUserID    uint64
 	WarehouseID     string

@@ -46,7 +46,7 @@ jobs:
 
   flutter:
     runs-on: ubuntu-latest
-    continue-on-error: true
+    # E5.3：analyze 失败阻断 CI（不再 continue-on-error）
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2

@@ -67,7 +67,20 @@ Copy-Item $cfgSrc (Join-Path $OutRoot 'configs\config.yaml')
 Copy-Item -Recurse -Force (Join-Path $RepoRoot 'sql\*') (Join-Path $OutRoot 'sql\')
 Copy-Item (Join-Path $RepoRoot 'contracts\openapi\openapi.yaml') (Join-Path $OutRoot 'docs\openapi.yaml') -ErrorAction SilentlyContinue
 Copy-Item (Join-Path $RepoRoot 'docs\guides\开发上手.md') (Join-Path $OutRoot 'docs\') -ErrorAction SilentlyContinue
+Copy-Item (Join-Path $RepoRoot 'docs\guides\证书与密钥申请指南.md') (Join-Path $OutRoot 'docs\') -ErrorAction SilentlyContinue
 Copy-Item (Join-Path $RepoRoot 'deploy\windows\README.md') (Join-Path $OutRoot 'docs\windows-deploy.md') -ErrorAction SilentlyContinue
+Copy-Item (Join-Path $RepoRoot 'configs\external_credentials.example.yaml') (Join-Path $OutRoot 'configs\external_credentials.example.yaml') -ErrorAction SilentlyContinue
+Copy-Item (Join-Path $RepoRoot 'configs\runtime.env.example') (Join-Path $OutRoot 'configs\runtime.env.example') -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path (Join-Path $OutRoot 'deploy\nginx'), (Join-Path $OutRoot 'deploy\windows') | Out-Null
+Copy-Item (Join-Path $RepoRoot 'deploy\nginx\watcher.conf') (Join-Path $OutRoot 'deploy\nginx\') -ErrorAction SilentlyContinue
+Copy-Item (Join-Path $RepoRoot 'deploy\nginx\watcher-tls.conf') (Join-Path $OutRoot 'deploy\nginx\') -ErrorAction SilentlyContinue
+Copy-Item (Join-Path $RepoRoot 'deploy\windows\install-nssm-services.ps1') (Join-Path $OutRoot 'deploy\windows\') -ErrorAction SilentlyContinue
+Copy-Item (Join-Path $RepoRoot 'docs\qa\验收记录模板.md') (Join-Path $OutRoot 'docs\') -ErrorAction SilentlyContinue
+
+# 生成含本机白名单 / 包名 / SHA1 的申请说明，供填写 API Key
+Write-Host "gen API key application guide"
+& powershell -NoProfile -File (Join-Path $RepoRoot 'tools\scripts\gen-api-key-guide.ps1') -OutDir (Join-Path $OutRoot 'docs')
+if ($LASTEXITCODE -ne 0) { Write-Warning "gen-api-key-guide.ps1 failed (non-fatal)" }
 
 if (-not $SkipFrontend) {
     foreach ($app in @('admin', 'portal')) {
@@ -123,6 +136,9 @@ Write-Host 'static: web\admin  web\portal  (需 Nginx/IIS 托管并反代 /api)'
 
 - ``bin\`` — webhttp / history / push / mqtt
 - ``configs\config.yaml`` — 请按环境修改后使用
+- ``configs\external_credentials.example.yaml`` — 地图/推送等外部凭证模板
+- ``docs\API密钥申请说明.md`` — **打包时自动生成**（白名单、包名、SHA1）
+- ``docs\申请速查.txt`` — 白名单/SHA1 速查
 - ``sql\schema\watcher_schema.sql`` · ``sql\data\watcher_data.sql``
 - ``web\admin`` · ``web\portal`` — 前端静态资源
 - ``start-all.ps1`` — 一键拉起四个后端进程
@@ -130,10 +146,11 @@ Write-Host 'static: web\admin  web\portal  (需 Nginx/IIS 托管并反代 /api)'
 ## 使用
 
 1. 编辑 ``configs\config.yaml``（MySQL DSN、JWT 等）
-2. 空库先执行 ``sql\schema\watcher_schema.sql`` 再执行 ``sql\data\watcher_data.sql``
-3. 确保中间件已就绪（可用仓库 ``deploy\compose``）
-4. ``powershell -File .\start-all.ps1``
-5. 用 Nginx/IIS 托管 ``web\admin``、``web\portal``，反代 ``/api`` → ``http://127.0.0.1:8080``
+2. 阅读 ``docs\API密钥申请说明.md``，按说明申请百度 AK / APNs / FCM，填入凭证配置
+3. 空库先执行 ``sql\schema\watcher_schema.sql`` 再执行 ``sql\data\watcher_data.sql``
+4. 确保中间件已就绪（可用仓库 ``deploy\compose``）
+5. ``powershell -File .\start-all.ps1``
+6. 用 Nginx/IIS 托管 ``web\admin``、``web\portal``，反代 ``/api`` → ``http://127.0.0.1:8080``
 
 默认账号：``admin`` / ``Admin@123``
 "@

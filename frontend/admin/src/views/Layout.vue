@@ -8,6 +8,7 @@
         <el-menu-item v-if="has('role:view')" index="/roles">角色矩阵</el-menu-item>
         <el-menu-item v-if="has('audit:view')" index="/audit">审计</el-menu-item>
         <el-menu-item v-if="has('material:view')" index="/materials">物资</el-menu-item>
+        <el-menu-item v-if="has('material:view')" index="/unique-codes">唯一码</el-menu-item>
         <el-menu-item v-if="has('material:view')" index="/stocks">库存</el-menu-item>
         <el-menu-item v-if="has('inbound:edit')" index="/inbound">入库</el-menu-item>
         <el-menu-item v-if="has('outbound:edit')" index="/outbound">出库</el-menu-item>
@@ -26,8 +27,16 @@
     </el-aside>
     <el-container>
       <el-header class="header">
-        <span>{{ user.displayName || user.username }}</span>
-        <el-button link type="danger" @click="logout">退出</el-button>
+        <el-dropdown>
+          <span class="user-link">{{ user.displayName || user.username || '用户' }} ▾</span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item @click="router.push('/profile')">个人中心</el-dropdown-item>
+              <el-dropdown-item @click="router.push('/change-password')">修改密码</el-dropdown-item>
+              <el-dropdown-item divided @click="logout">退出</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </el-header>
       <el-main><router-view /></el-main>
     </el-container>
@@ -54,4 +63,5 @@ async function logout() {
 .aside { background:#102a43; }
 .brand { color:#fff; padding:16px; font-weight:700; }
 .header { display:flex; justify-content:flex-end; align-items:center; gap:12px; border-bottom:1px solid #eee; }
+.user-link { cursor:pointer; color:#334e68; }
 </style>

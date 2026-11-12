@@ -17,6 +17,7 @@ import (
 	"watcher/backend/pkg/bus"
 	"watcher/backend/pkg/canonical"
 	"watcher/backend/pkg/logx"
+	"watcher/backend/pkg/metricsx"
 	"watcher/backend/pkg/response"
 )
 
@@ -50,11 +51,19 @@ func (h *Hub) Broadcast(b []byte) {
 var upgrader = websocket.Upgrader{CheckOrigin: checkOrigin}
 
 func checkOrigin(r *http.Request) bool {
-	allow := os.Getenv("WATCHER_WS_ORIGINS") // comma-separated; empty = allow all (dev)
+	allow := os.Getenv("WATCHER_WS_ORIGINS") // comma-separated; empty = allow all (dev only)
+	origin := r.Header.Get("Origin")
+	env := os.Getenv("WATCHER_ENV")
+	if env == "" {
+		env = "dev"
+	}
+	// 生产未配置白名单：拒绝带 Origin 的跨站连接（同机无 Origin 的探测仍放行）
+	if (allow == "" || allow == "*") && (env == "prod" || env == "production") {
+		return origin == ""
+	}
 	if allow == "" || allow == "*" {
 		return true
 	}
-	origin := r.Header.Get("Origin")
 	if origin == "" {
 		return true
 	}
@@ -132,6 +141,7 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.GET("/healthz", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
+	metricsx.Register(r)
 
 	r.POST("/internal/publish", func(c *gin.Context) {
 		raw, err := c.GetRawData()

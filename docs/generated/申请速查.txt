@@ -1,0 +1,11 @@
+﻿# 百度 JS 域名白名单（本机生成 2026-11-11 11:15:03）
+localhost
+192.168.0.114
+192.168.0.100
+
+# Android
+applicationId=com.example.watcher_app
+debugSHA1=9B:11:27:33:A7:86:56:9E:DE:F3:62:99:E4:C6:EE:DE:B6:FC:E2:74
+
+# iOS
+bundleId=com.example.watcherApp

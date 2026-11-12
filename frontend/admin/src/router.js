@@ -21,6 +21,8 @@ import Audit from './views/Audit.vue'
 import MqttSchema from './views/MqttSchema.vue'
 import Integrations from './views/Integrations.vue'
 import Devices from './views/Devices.vue'
+import UniqueCodes from './views/UniqueCodes.vue'
+import Profile from './views/Profile.vue'
 import ChangePassword from './views/ChangePassword.vue'
 import Forbidden from './views/Forbidden.vue'
 
@@ -36,7 +38,9 @@ const routes = [
       { path: 'users', component: Users, meta: { perm: 'user:view' } },
       { path: 'roles', component: Roles, meta: { perm: 'role:view' } },
       { path: 'materials', component: Materials, meta: { perm: 'material:view' } },
+      { path: 'unique-codes', component: UniqueCodes, meta: { perm: 'material:view' } },
       { path: 'stocks', component: Stocks, meta: { perm: 'material:view' } },
+      { path: 'profile', component: Profile },
       { path: 'inbound', component: Inbound, meta: { perm: 'inbound:edit' } },
       { path: 'outbound', component: Outbound, meta: { perm: 'outbound:edit' } },
       { path: 'approvals', component: Approvals, meta: { perm: 'approval:view' } },

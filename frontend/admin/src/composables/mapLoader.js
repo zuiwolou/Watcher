@@ -1,4 +1,8 @@
-/** Load Leaflet from CDN (no npm). Baidu tiles optional via VITE_BAIDU_MAP_AK later. */
+/** Load Leaflet from CDN。填了 VITE_BAIDU_JAVASCRIPT_API_AK 且 provider=baidu 后可换百度 SDK。 */
+import { baiduJavascriptApiAk, baiduMapAk, useBaiduMap } from '../config/credentials'
+
+export { baiduJavascriptApiAk, baiduMapAk, useBaiduMap }
+
 let loading = null
 
 export function loadLeaflet() {

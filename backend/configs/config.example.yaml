@@ -19,3 +19,34 @@ minio:
   use_ssl: false
   public_url: "http://127.0.0.1:9000"
 # 环境变量：WATCHER_INTERNAL_TOKEN（mqtt→评估）、WATCHER_WS_ORIGINS（WSS Origin 白名单）
+#
+# 地图 / 推送 / TLS 等外部凭证：请填仓库根 configs/external_credentials.yaml
+# （从 external_credentials.example.yaml 复制）。申请前先生成说明文档：
+#   powershell -File tools/scripts/gen-api-key-guide.ps1
+# 字段名对齐开放平台申请到的密钥名（详见 configs/external_credentials.example.yaml）
+maps:
+  provider: leaflet
+  # 百度 → 浏览器端 JavaScript API → AK
+  baidu_javascript_api_ak: ""
+  baidu_javascript_api_ak_admin: ""
+  baidu_javascript_api_ak_portal: ""
+  # 百度 → Android SDK / iOS SDK → AK
+  baidu_android_sdk_ak: ""
+  baidu_ios_sdk_ak: ""
+  # 百度 → Web 服务 API → AK（仅服务端）
+  baidu_web_service_api_ak: ""
+push:
+  apns_enabled: false
+  # Apple → APNs Auth Key → Key ID / Team ID / AuthKey_*.p8
+  apns_key_id: ""
+  apns_team_id: ""
+  apns_bundle_id: ""
+  apns_auth_key_path: ""
+  apns_environment: sandbox
+  fcm_enabled: false
+  # Firebase → Project ID / 服务账号 JSON
+  fcm_project_id: ""
+  fcm_service_account_json_path: ""
+tls:
+  cert_path: ""
+  key_path: ""

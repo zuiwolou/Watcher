@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package biz.v1;
+
+option go_package = "watcher/contracts/gen/biz/v1;bizv1";
+
+// BizService — 需求-后端 §6.1 骨架（BE-06）。
+// 生成：protoc --go_out=contracts/gen --go-grpc_out=contracts/gen -I contracts/proto contracts/proto/biz/v1/biz.proto
+// 当前 webhttp 仍可同进程直调 internal/biz/service；cmd/biz 可挂本服务。
+
+service BizService {
+  rpc ListAlarms(ListAlarmsRequest) returns (ListAlarmsResponse);
+  rpc AckAlarm(AckAlarmRequest) returns (AckAlarmResponse);
+  rpc CloseAlarm(CloseAlarmRequest) returns (CloseAlarmResponse);
+  rpc EvaluateTelemetry(EvaluateTelemetryRequest) returns (EvaluateTelemetryResponse);
+  rpc EvaluateLocation(EvaluateLocationRequest) returns (EvaluateLocationResponse);
+  rpc VoidUniqueCode(VoidUniqueCodeRequest) returns (VoidUniqueCodeResponse);
+}
+
+message ListAlarmsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string status = 3;
+}
+
+message Alarm {
+  string id = 1;
+  string warehouse_id = 2;
+  string title = 3;
+  string level = 4;
+  string status = 5;
+  string device_id = 6;
+  string metric = 7;
+  double value = 8;
+}
+
+message ListAlarmsResponse {
+  repeated Alarm items = 1;
+  int64 total = 2;
+}
+
+message AckAlarmRequest {
+  string alarm_id = 1;
+  string actor_id = 2;
+}
+
+message AckAlarmResponse {}
+
+message CloseAlarmRequest {
+  string alarm_id = 1;
+}
+
+message CloseAlarmResponse {}
+
+message EvaluateTelemetryRequest {
+  string warehouse_id = 1;
+  string device_id = 2;
+  map<string, double> metrics = 3;
+}
+
+message EvaluateTelemetryResponse {
+  repeated Alarm raised = 1;
+}
+
+message EvaluateLocationRequest {
+  string warehouse_id = 1;
+  string device_id = 2;
+  double lat = 3;
+  double lng = 4;
+}
+
+message EvaluateLocationResponse {
+  repeated Alarm raised = 1;
+}
+
+message VoidUniqueCodeRequest {
+  string code = 1;
+  string operator_id = 2;
+  string remark = 3;
+}
+
+message VoidUniqueCodeResponse {
+  string code = 1;
+  string status = 2;
+}

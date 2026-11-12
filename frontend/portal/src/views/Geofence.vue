@@ -10,11 +10,18 @@
     <el-row :gutter="12">
       <el-col :span="14"><div ref="mapEl" class="map" /></el-col>
       <el-col :span="10">
-        <el-table :data="list" border size="small" height="520" @row-click="focus">
+        <el-table :data="list" border size="small" height="280" @row-click="focus">
           <el-table-column prop="Name" label="名称" />
           <el-table-column prop="ShapeType" label="形状" width="90" />
           <el-table-column prop="WarehouseID" label="仓" width="90" />
           <el-table-column prop="Enabled" label="启用" width="70" />
+        </el-table>
+        <h3 style="margin:12px 0 8px">围栏事件</h3>
+        <el-table :data="events" border size="small" height="200">
+          <el-table-column prop="Title" label="事件" />
+          <el-table-column prop="DeviceID" label="设备" width="100" />
+          <el-table-column prop="Status" label="状态" width="80" />
+          <el-table-column prop="RaisedAt" label="时间" width="160" />
         </el-table>
       </el-col>
     </el-row>
@@ -27,6 +34,7 @@ import { loadLeaflet } from '../composables/mapLoader'
 
 const warehouseId = ref('WH01')
 const list = ref([])
+const events = ref([])
 const mapEl = ref(null)
 let map, L, layers = []
 
@@ -88,6 +96,8 @@ function focus(row) {
 
 async function load() {
   list.value = (await http.get('/geofences', { params: { warehouseId: warehouseId.value } })) || []
+  const alarms = await http.get('/alarms', { params: { status: 'raised', page: 1, pageSize: 50 } })
+  events.value = (alarms.list || []).filter((a) => String(a.RuleCode || '').startsWith('geofence_'))
   render()
 }
 

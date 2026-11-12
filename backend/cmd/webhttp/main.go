@@ -18,8 +18,10 @@ import (
 	"watcher/backend/pkg/bus"
 	"watcher/backend/pkg/config"
 	"watcher/backend/pkg/database"
+	"watcher/backend/pkg/etcdx"
 	"watcher/backend/pkg/ldapx"
 	"watcher/backend/pkg/logx"
+	"watcher/backend/pkg/metricsx"
 	"watcher/backend/pkg/storage"
 )
 
@@ -101,6 +103,25 @@ func main() {
 		BaseDN: cfg.LDAPBaseDN, UserFilter: cfg.LDAPFilter, StartTLS: cfg.LDAPStartTLS,
 	})
 
+	// BE-18：etcd 可选覆盖 JWT Access TTL / 围栏冷却
+	if etcdCli, err := etcdx.Dial(); err != nil {
+		log.Warn("etcd dial", zap.Error(err))
+	} else if etcdCli != nil {
+		defer etcdCli.Close()
+		if v, err := etcdCli.GetString(context.Background(), etcdx.KeyJWTAccessTTL); err == nil && v != "" {
+			if d, err := time.ParseDuration(v); err == nil && d > 0 {
+				cfg.AccessTokenTTL = d
+				log.Info("jwt access_ttl from etcd", zap.Duration("ttl", d))
+			}
+		}
+		if v, err := etcdCli.GetString(context.Background(), etcdx.KeyGeofenceCooldown); err == nil && v != "" {
+			if d, err := time.ParseDuration(v); err == nil && d > 0 {
+				biz.SetAlarmSuppressWindow(d)
+				log.Info("geofence cooldown from etcd", zap.Duration("cooldown", d))
+			}
+		}
+	}
+
 	jwtMgr := auth.NewManager(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 	authH := handler.NewAuthHandler(db, jwtMgr, enforcer, ldapClient, cfg.DefaultWarehouseID)
 	adminH := handler.NewAdminHandler(db, enforcer)
@@ -112,6 +133,7 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Recovery(), middleware.RequestID())
 	r.GET("/healthz", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
+	metricsx.Register(r)
 
 	internal := r.Group("/internal")
 	internal.Use(middleware.InternalToken())

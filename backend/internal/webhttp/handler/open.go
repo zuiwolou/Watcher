@@ -31,7 +31,7 @@ func (h *BizHandler) OpenListStocks(c *gin.Context) {
 func (h *BizHandler) OpenListAlarms(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	size, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
-	list, total, err := h.biz.ListAlarms(c.Request.Context(), page, size, c.Query("status"))
+	list, total, err := h.biz.ListAlarms(c.Request.Context(), page, size, c.Query("status"), c.Query("level"))
 	if err != nil {
 		mapBizErr(c, err)
 		return

@@ -17,7 +17,16 @@
         <router-link v-if="has('geofence:view')" to="/geofences">围栏</router-link>
       </nav>
       <span class="ws">{{ wsLabel }}</span>
-      <el-button link type="danger" @click="logout">退出</el-button>
+      <el-dropdown>
+        <span class="user-link">{{ userLabel }} ▾</span>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item @click="router.push('/profile')">个人中心</el-dropdown-item>
+            <el-dropdown-item @click="router.push('/change-password')">修改密码</el-dropdown-item>
+            <el-dropdown-item divided @click="logout">退出</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </header>
     <main class="main"><router-view /></main>
   </div>
@@ -37,6 +46,12 @@ let off
 const wsLabel = computed(() => {
   const map = { open: '实时已连接', connecting: '实时连接中', closed: '实时断开', error: '实时异常', idle: '实时未启', 'no-token': '未登录' }
   return map[wsState.value] || wsState.value
+})
+const userLabel = computed(() => {
+  try {
+    const u = JSON.parse(localStorage.getItem('user') || '{}')
+    return u.displayName || u.username || '用户'
+  } catch { return '用户' }
 })
 
 function has(p) { return hasPerm(p) }
@@ -77,5 +92,6 @@ nav a{color:#9fb3c8;text-decoration:none;position:relative}
 nav a.router-link-active{color:#2bb0ed}
 .badge{margin-left:4px}
 .ws{font-size:12px;opacity:.85}
+.user-link{cursor:pointer;color:#d9e2ec}
 .main{padding:16px 20px}
 </style>

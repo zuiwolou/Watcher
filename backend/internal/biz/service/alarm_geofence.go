@@ -47,8 +47,8 @@ func (s *Service) ListThresholds(ctx context.Context, warehouseID string) ([]mod
 	return list, err
 }
 
-// alarmSuppressWindow 同一规则在同一设备上的告警抑制窗口，避免持续超阈时重复刷屏。
-const alarmSuppressWindow = 10 * time.Minute
+// defaultAlarmSuppressWindow 同一规则在同一设备上的告警抑制窗口，避免持续超阈时重复刷屏。
+const defaultAlarmSuppressWindow = 10 * time.Minute
 
 // EvaluateTelemetry compares metrics against thresholds and may raise alarms.
 func (s *Service) EvaluateTelemetry(ctx context.Context, warehouseID, deviceID string, metrics map[string]float64) ([]model.Alarm, error) {
@@ -75,7 +75,7 @@ func (s *Service) EvaluateTelemetry(ctx context.Context, warehouseID, deviceID s
 		}
 		// suppress duplicate open alarm for same metric+device within window
 		var cnt int64
-		since := time.Now().Add(-alarmSuppressWindow)
+		since := time.Now().Add(-s.suppressWindow())
 		if err := s.db.WithContext(ctx).Model(&model.Alarm{}).Where(
 			"warehouse_id = ? AND device_id = ? AND metric = ? AND status = ? AND raised_at > ?",
 			warehouseID, deviceID, r.Metric, model.AlarmRaised, since).Count(&cnt).Error; err != nil {
@@ -110,12 +110,15 @@ func (s *Service) EvaluateTelemetry(ctx context.Context, warehouseID, deviceID s
 	return raised, nil
 }
 
-func (s *Service) ListAlarms(ctx context.Context, page, pageSize int, status string) ([]model.Alarm, int64, error) {
+func (s *Service) ListAlarms(ctx context.Context, page, pageSize int, status, level string) ([]model.Alarm, int64, error) {
 	page, pageSize = normalizePage(page, pageSize)
 	var total int64
 	q := s.db.WithContext(ctx).Model(&model.Alarm{})
 	if status != "" {
 		q = q.Where("status = ?", status)
+	}
+	if level != "" {
+		q = q.Where("level = ?", level)
 	}
 	_ = q.Count(&total)
 	var list []model.Alarm
@@ -394,7 +397,7 @@ func (s *Service) EvaluateLocation(ctx context.Context, warehouseID, deviceID st
 			continue
 		}
 		var cnt int64
-		since := time.Now().Add(-alarmSuppressWindow)
+		since := time.Now().Add(-s.suppressWindow())
 		if err := s.db.WithContext(ctx).Model(&model.Alarm{}).Where(
 			"warehouse_id = ? AND device_id = ? AND rule_code = ? AND status = ? AND raised_at > ?",
 			warehouseID, deviceID, fmt.Sprintf("geofence_%d", f.ID), model.AlarmRaised, since).Count(&cnt).Error; err != nil {

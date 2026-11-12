@@ -17,15 +17,21 @@
     </el-form>
     <el-table :data="list" border>
       <el-table-column prop="Code" label="唯一码" min-width="160" />
-      <el-table-column prop="MaterialID" label="物资ID" width="90" />
+      <el-table-column prop="MaterialID" label="物资ID" width="100" />
       <el-table-column prop="WarehouseID" label="仓" width="100" />
       <el-table-column prop="Status" label="状态" width="110" />
       <el-table-column prop="UpdatedAt" label="更新时间" width="180" />
+      <el-table-column label="操作" width="100">
+        <template #default="{ row }">
+          <el-button size="small" @click="copyCode(row.Code)">复制</el-button>
+        </template>
+      </el-table-column>
     </el-table>
   </div>
 </template>
 <script setup>
 import { onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import http from '../api'
 import { hasPerm } from '../auth'
 
@@ -44,6 +50,15 @@ async function load() {
   params.set('pageSize', '100')
   const data = await http.get(`/unique-codes?${params}`)
   list.value = data.list || []
+}
+
+async function copyCode(code) {
+  try {
+    await navigator.clipboard.writeText(code)
+    ElMessage.success('已复制')
+  } catch {
+    ElMessage.error('复制失败')
+  }
 }
 
 function exportCsv() {

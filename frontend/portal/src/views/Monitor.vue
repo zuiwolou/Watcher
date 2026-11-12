@@ -1,6 +1,9 @@
 <template>
   <div>
-    <h2>监测曲线</h2>
+    <div class="bar">
+      <h2>监测曲线</h2>
+      <el-button link type="primary" @click="$router.push('/alarms')">查看告警 →</el-button>
+    </div>
     <el-form inline>
       <el-form-item label="仓ID"><el-input v-model="warehouseId" style="width:120px" /></el-form-item>
       <el-form-item label="指标">
@@ -85,3 +88,7 @@ onMounted(() => {
 })
 onUnmounted(() => { off?.() })
 </script>
+<style scoped>
+.bar{display:flex;justify-content:space-between;align-items:center}
+h2{margin:0}
+</style>

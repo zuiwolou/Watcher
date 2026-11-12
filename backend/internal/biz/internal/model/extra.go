@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"watcher/backend/pkg/jsid"
+)
 
 // --- inventory ---
 
@@ -31,10 +35,10 @@ const (
 )
 
 type InventoryLine struct {
-	ID         uint64 `gorm:"primaryKey"`
-	TaskID     uint64 `gorm:"index"`
-	UniqueCode string `gorm:"size:64;index"`
-	MaterialID uint64
+	ID         uint64  `gorm:"primaryKey"`
+	TaskID     uint64  `gorm:"index"`
+	UniqueCode string  `gorm:"size:64;index"`
+	MaterialID jsid.ID
 	Scanned    bool
 	ScannedAt  *time.Time
 	OperatorID uint64
@@ -98,16 +102,16 @@ const (
 )
 
 type StockAdjustment struct {
-	ID               uint64  `gorm:"primaryKey"`
-	WarehouseID      string  `gorm:"size:64;index"`
-	MaterialID       uint64  `gorm:"index"`
-	Delta            float64 `gorm:"type:decimal(18,4)"`
-	Reason           string  `gorm:"size:255"`
-	Status           string  `gorm:"size:16;index"`
-	ApprovalOrderID  *uint64
-	CreatedBy        uint64
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID              uint64  `gorm:"primaryKey"`
+	WarehouseID     string  `gorm:"size:64;index"`
+	MaterialID      jsid.ID `gorm:"index"`
+	Delta           float64 `gorm:"type:decimal(18,4)"`
+	Reason          string  `gorm:"size:255"`
+	Status          string  `gorm:"size:16;index"`
+	ApprovalOrderID *uint64
+	CreatedBy       uint64
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 func (StockAdjustment) TableName() string { return "stock_adjustments" }

@@ -21,6 +21,14 @@ mysql -u watcher -p watcher -e "source $PWD\sql\data\watcher_data.sql"
 2. 中间件：Docker Desktop Compose 或本机安装。
 3. `powershell -File .\start-all.ps1`
 4. IIS / Nginx 托管 `web\admin`、`web\portal`，反代 `/api` 与 `/v1/stream`。
-5. 可选：NSSM 将四个 exe 注册为服务；环境变量 `WATCHER_INTERNAL_TOKEN`、`WATCHER_WS_ORIGINS`。
+5. 注册 Windows 服务（需 [NSSM](https://nssm.cc/)，管理员 PowerShell）：
+
+```powershell
+powershell -File deploy\windows\install-nssm-services.ps1 -Root <发布包根目录> `
+  -InternalToken '你的内部令牌' `
+  -WsOrigins 'https://你的域名'
+```
+
+6. 环境变量模板：仓库 `configs/runtime.env.example`。
 
 默认账号：`admin` / `Admin@123`（首次登录后请改密）。

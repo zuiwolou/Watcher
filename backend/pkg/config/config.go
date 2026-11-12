@@ -40,6 +40,26 @@ type Config struct {
 	LDAPBaseDN   string
 	LDAPFilter   string
 	LDAPStartTLS bool
+
+	// Maps / push / TLS — names align with vendor API key products
+	MapProvider                   string
+	BaiduJavascriptAPIAK          string
+	BaiduJavascriptAPIAKAdmin     string
+	BaiduJavascriptAPIAKPortal    string
+	BaiduAndroidSDKAK             string
+	BaiduIOSSDKAK                 string
+	BaiduWebServiceAPIAK          string
+	APNsEnabled                   bool
+	APNsKeyID                     string
+	APNsTeamID                    string
+	APNsBundleID                  string
+	APNsAuthKeyPath               string
+	APNsEnvironment               string
+	FCMEnabled                    bool
+	FCMProjectID                  string
+	FCMServiceAccountJSONPath     string
+	TLSCertPath                   string
+	TLSKeyPath                    string
 }
 
 func Load(service string) (*Config, error) {
@@ -88,6 +108,33 @@ func Load(service string) (*Config, error) {
 		LDAPBaseDN:         v.GetString("ldap.base_dn"),
 		LDAPFilter:         v.GetString("ldap.user_filter"),
 		LDAPStartTLS:       v.GetBool("ldap.start_tls"),
+		MapProvider: firstNonEmpty(v.GetString("maps.provider"), "leaflet"),
+		BaiduJavascriptAPIAK: firstNonEmpty(
+			v.GetString("maps.baidu_javascript_api_ak"),
+			v.GetString("maps.baidu_admin_ak"), // legacy
+		),
+		BaiduJavascriptAPIAKAdmin: firstNonEmpty(
+			v.GetString("maps.baidu_javascript_api_ak_admin"),
+			v.GetString("maps.baidu_admin_ak"),
+		),
+		BaiduJavascriptAPIAKPortal: firstNonEmpty(
+			v.GetString("maps.baidu_javascript_api_ak_portal"),
+			v.GetString("maps.baidu_portal_ak"),
+		),
+		BaiduAndroidSDKAK:         v.GetString("maps.baidu_android_sdk_ak"),
+		BaiduIOSSDKAK:             v.GetString("maps.baidu_ios_sdk_ak"),
+		BaiduWebServiceAPIAK:      v.GetString("maps.baidu_web_service_api_ak"),
+		APNsEnabled:               v.GetBool("push.apns_enabled"),
+		APNsKeyID:                 v.GetString("push.apns_key_id"),
+		APNsTeamID:                v.GetString("push.apns_team_id"),
+		APNsBundleID:              v.GetString("push.apns_bundle_id"),
+		APNsAuthKeyPath:           v.GetString("push.apns_auth_key_path"),
+		APNsEnvironment:           firstNonEmpty(v.GetString("push.apns_environment"), "sandbox"),
+		FCMEnabled:                v.GetBool("push.fcm_enabled"),
+		FCMProjectID:              v.GetString("push.fcm_project_id"),
+		FCMServiceAccountJSONPath: v.GetString("push.fcm_service_account_json_path"),
+		TLSCertPath:               v.GetString("tls.cert_path"),
+		TLSKeyPath:                v.GetString("tls.key_path"),
 	}
 	_ = service
 	return cfg, nil
@@ -114,6 +161,10 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("minio.public_url", "http://127.0.0.1:9000")
 	v.SetDefault("ldap.enabled", false)
 	v.SetDefault("ldap.user_filter", "(uid=%s)")
+	v.SetDefault("maps.provider", "leaflet")
+	v.SetDefault("push.apns_enabled", false)
+	v.SetDefault("push.apns_environment", "sandbox")
+	v.SetDefault("push.fcm_enabled", false)
 }
 
 func firstNonEmpty(a, b string) string {
